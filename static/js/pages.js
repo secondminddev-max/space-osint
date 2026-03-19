@@ -159,17 +159,26 @@ Pages.cmd = async function(el) {
         </div><!-- /cmd-page -->
     `;
 
-    // Init map — delay to let flexbox resolve dimensions, then invalidateSize
+    // Init map — force container height first, then create map
     setTimeout(() => {
+        const mapEl = document.getElementById('sat-map');
+        if (!mapEl) return;
+        // Force a pixel height based on parent
+        const parent = mapEl.parentElement;
+        if (parent && parent.offsetHeight > 0) {
+            mapEl.style.height = parent.offsetHeight + 'px';
+        } else {
+            // Fallback — calc from viewport
+            mapEl.style.height = (window.innerHeight - 280) + 'px';
+        }
         if (typeof initSatMap === 'function') {
             initSatMap('sat-map');
-            // Leaflet needs a kick after flex layout resolves
             if (satMap) {
-                setTimeout(() => satMap.invalidateSize(), 100);
-                setTimeout(() => satMap.invalidateSize(), 500);
+                setTimeout(() => satMap.invalidateSize(), 200);
+                setTimeout(() => satMap.invalidateSize(), 1000);
             }
         }
-    }, 100);
+    }, 150);
 
     // Fetch all data
     const [advStats, launches, weather, neo, news, criticalSystems, vulns, threatOv, stats] = await Promise.all([

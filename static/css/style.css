@@ -375,34 +375,34 @@ body {
 .tb-cell.info .tb-val { color: var(--cyan); }
 .tb-cell.info .tb-icon { color: var(--cyan); }
 
-/* ---- CMD Page — Full viewport, no scroll ---- */
+/* ---- CMD Page ---- */
 .cmd-page {
-    display: flex;
-    flex-direction: column;
     height: calc(100vh - var(--banner-h) - var(--tab-h) - var(--status-h));
     overflow: hidden;
+    display: grid;
+    grid-template-rows: auto 1fr auto auto;
 }
 
 .cmd-layout {
-    flex: 1;
-    display: flex;
     position: relative;
-    min-height: 0;
-    margin-bottom: 1px;
+    overflow: hidden;
 }
 
 .cmd-map-wrap {
-    flex: 1;
-    position: relative;
-    border: 1px solid var(--border);
-    min-height: 0;
-}
-
-.cmd-map-wrap .map-container {
-    position: absolute;
-    inset: 0;
     width: 100%;
     height: 100%;
+    position: relative;
+    border: 1px solid var(--border);
+}
+
+#sat-map {
+    width: 100%;
+    height: 100%;
+}
+
+#orbital-map, #gs-map {
+    width: 100%;
+    height: 450px;
 }
 
 /* Map Legend */
