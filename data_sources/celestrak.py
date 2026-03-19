@@ -2,12 +2,13 @@
 CelesTrak satellite catalog + SGP4 propagation
 Fetches GP (General Perturbations) element sets and computes real-time positions.
 """
+from __future__ import annotations
 import time
 import math
 from datetime import datetime, timezone
+from typing import Optional, List, Dict
 import httpx
 from sgp4.api import Satrec, WGS72
-from sgp4 import exporter
 from config import CACHE_TTL_TLE_CATALOG, CACHE_TTL_SATELLITES
 
 _cache = {}
@@ -119,7 +120,14 @@ def _build_satrec(gp: dict) -> Satrec | None:
 def _epoch_to_jdsatepoch(epoch_str: str) -> float:
     """Convert ISO epoch string to days since 1949-12-31 (sgp4 epoch)."""
     try:
-        dt = datetime.fromisoformat(epoch_str.replace("Z", "+00:00"))
+        # CelesTrak epochs may or may not have timezone info
+        if epoch_str.endswith("Z"):
+            epoch_str = epoch_str[:-1]
+        if "+" not in epoch_str and epoch_str[-6:-5] != "-":
+            # No timezone — treat as UTC
+            dt = datetime.fromisoformat(epoch_str).replace(tzinfo=timezone.utc)
+        else:
+            dt = datetime.fromisoformat(epoch_str)
         # SGP4 epoch is in days since 1949 Dec 31 00:00 UT
         ref = datetime(1949, 12, 31, 0, 0, 0, tzinfo=timezone.utc)
         return (dt - ref).total_seconds() / 86400.0

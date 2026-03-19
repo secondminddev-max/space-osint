@@ -7,7 +7,9 @@ Space Weather data from NOAA SWPC
 - Active alerts
 - 10.7cm solar flux
 """
+from __future__ import annotations
 import time
+from typing import Optional, Union, List, Dict
 import httpx
 from config import CACHE_TTL_WEATHER, CACHE_TTL_KP
 

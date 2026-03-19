@@ -1,5 +1,6 @@
 /* ============================================================
-   Space OSINT — Chart rendering (Chart.js)
+   FVEY SDA — Chart Rendering (Chart.js)
+   Military Command Centre Display
    ============================================================ */
 
 let kpChart = null;
@@ -15,8 +16,7 @@ function initKpChart() {
             datasets: [{
                 data: [],
                 backgroundColor: [],
-                borderRadius: 2,
-                barPercentage: 0.85,
+                barPercentage: 0.9,
             }]
         },
         options: {
@@ -25,11 +25,13 @@ function initKpChart() {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: 'rgba(8,13,28,0.95)',
-                    titleColor: '#00c8ff',
-                    bodyColor: '#e0e8f0',
-                    borderColor: 'rgba(0,200,255,0.2)',
+                    backgroundColor: '#000',
+                    titleColor: '#FFB000',
+                    bodyColor: '#FFFFFF',
+                    borderColor: 'rgba(255,176,0,0.3)',
                     borderWidth: 1,
+                    titleFont: { family: "'Share Tech Mono'" },
+                    bodyFont: { family: "'Share Tech Mono'" },
                     callbacks: {
                         label: (ctx) => `Kp: ${ctx.parsed.y.toFixed(1)}`
                     }
@@ -39,8 +41,8 @@ function initKpChart() {
                 x: {
                     display: true,
                     ticks: {
-                        color: 'rgba(200,215,230,0.3)',
-                        font: { size: 8, family: 'JetBrains Mono' },
+                        color: 'rgba(200,210,220,0.25)',
+                        font: { size: 7, family: "'Share Tech Mono'" },
                         maxRotation: 0,
                         maxTicksLimit: 8,
                     },
@@ -52,12 +54,12 @@ function initKpChart() {
                     min: 0,
                     max: 9,
                     ticks: {
-                        color: 'rgba(200,215,230,0.3)',
-                        font: { size: 8, family: 'JetBrains Mono' },
+                        color: 'rgba(200,210,220,0.25)',
+                        font: { size: 7, family: "'Share Tech Mono'" },
                         stepSize: 3,
                     },
                     grid: {
-                        color: 'rgba(0,200,255,0.05)',
+                        color: 'rgba(255,176,0,0.05)',
                         drawBorder: false,
                     },
                     border: { display: false },
@@ -68,25 +70,21 @@ function initKpChart() {
 }
 
 function kpColor(val) {
-    if (val < 4) return '#00ff88';
-    if (val < 6) return '#ffd700';
-    if (val < 8) return '#ff8c00';
-    return '#ff3355';
+    if (val < 4) return '#20FF60';
+    if (val < 6) return '#FFD700';
+    if (val < 8) return '#FF8C00';
+    return '#FF2020';
 }
 
 function updateKpChart(history) {
     if (!kpChart || !history || !history.length) return;
 
-    // Show last 16 entries
     const recent = history.slice(-16);
     kpChart.data.labels = recent.map(h => {
         const t = h.time || '';
-        return t.substring(11, 16); // HH:MM
+        return t.substring(11, 16);
     });
     kpChart.data.datasets[0].data = recent.map(h => h.kp);
     kpChart.data.datasets[0].backgroundColor = recent.map(h => kpColor(h.kp));
     kpChart.update('none');
 }
-
-// Init on load
-document.addEventListener('DOMContentLoaded', initKpChart);

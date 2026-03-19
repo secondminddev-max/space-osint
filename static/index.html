@@ -3,216 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPACE OSINT — Global Operating Centre</title>
-
-    <!-- Fonts -->
+    <title>FVEY SPACE DOMAIN AWARENESS // COMBINED SPACE OPERATIONS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- Leaflet -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-    <!-- Our styles -->
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
 <!-- Classification Banner -->
-<div class="classification-banner">
-    UNCLASSIFIED // OSINT — GLOBAL SPACE OPERATING CENTRE
+<div id="class-banner">UNCLASSIFIED // OSINT // REL TO FVEY</div>
+
+<!-- Tab Bar -->
+<nav id="tab-bar">
+    <div class="tab-group-left">
+        <div class="sys-title">SPACE DOMAIN AWARENESS</div>
+    </div>
+    <div class="tab-group-center">
+        <div class="tab active" data-page="cmd">CMD</div>
+        <div class="tab" data-page="adversary">ADVERSARY</div>
+        <div class="tab" data-page="orbital">ORBITAL</div>
+        <div class="tab" data-page="launches">LAUNCH</div>
+        <div class="tab" data-page="ground">GROUND</div>
+        <div class="tab" data-page="missile">ASAT</div>
+        <div class="tab" data-page="fvey">FVEY</div>
+        <div class="tab" data-page="strategy">STRATEGY</div>
+    </div>
+    <div class="tab-group-right">
+        <span class="sys-indicator"><span class="dot-live"></span> FEEDS ACTIVE</span>
+    </div>
+</nav>
+
+<!-- Status Line -->
+<div id="status-line">
+    <span class="status-cell"><span class="sl-label">ZULU</span> <span id="utc-clock" class="sl-val">--:--:--Z</span></span>
+    <span class="status-cell"><span class="sl-label">THREAT</span> <span id="threat-badge" class="sl-val threat-high">HIGH</span></span>
+    <span class="status-cell"><span class="sl-label">SYS</span> <span class="sl-val nominal">NOMINAL</span></span>
+    <span class="status-cell"><span class="sl-label">FEEDS</span> <span class="sl-val" id="feed-status">SYNCING</span></span>
+    <span class="status-cell"><span class="sl-label">DATE</span> <span class="sl-val" id="utc-date">----/--/--</span></span>
+    <span class="status-cell"><span class="sl-label">EPOCH</span> <span class="sl-val" id="epoch-time">----------</span></span>
 </div>
 
-<!-- Header -->
-<header class="header">
-    <div class="header-title">
-        <div>
-            <h1>SPACE OSINT</h1>
-            <div class="subtitle">GLOBAL SPACE DOMAIN AWARENESS</div>
-        </div>
-    </div>
-    <div class="header-status">
-        <span id="utc-clock">--:--:-- UTC</span>
-        <span>|</span>
-        <span><span class="status-dot" style="display:inline-block"></span> LIVE</span>
-    </div>
-</header>
-
-<!-- Key Metrics Bar -->
-<div class="metrics-bar">
-    <div class="metric-item">
-        <div class="metric-value" id="m-tracked">--</div>
-        <div class="metric-label">Tracked Objects</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value" id="m-payloads">--</div>
-        <div class="metric-label">Active Payloads</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value" id="m-debris">--</div>
-        <div class="metric-label">Debris</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value" id="m-launches">--</div>
-        <div class="metric-label">Upcoming Launches</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value" id="m-kp">--</div>
-        <div class="metric-label">Kp Index</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value" id="m-wind">--</div>
-        <div class="metric-label">Solar Wind (km/s)</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value" id="m-neo">--</div>
-        <div class="metric-label">NEOs This Week</div>
-    </div>
-    <div class="metric-item">
-        <div class="metric-value green" id="m-astro">--</div>
-        <div class="metric-label">Humans in Space</div>
+<!-- Main Content Area -->
+<div id="content">
+    <div class="init-screen">
+        <div class="init-text">INITIALIZING SPACE DOMAIN AWARENESS SYSTEM</div>
+        <div class="init-bar"><div class="init-fill"></div></div>
     </div>
 </div>
 
-<!-- Dashboard Grid -->
-<main class="dashboard">
+<!-- Scanline Overlay -->
+<div id="scanline-overlay"></div>
 
-    <!-- Satellite Map -->
-    <section class="panel panel-map">
-        <div class="panel-header">
-            <h2>Satellite Tracking</h2>
-            <span class="updated" id="map-updated">--</span>
-        </div>
-        <div class="panel-body">
-            <div id="sat-map"></div>
-        </div>
-    </section>
-
-    <!-- Space Weather -->
-    <section class="panel panel-weather">
-        <div class="panel-header">
-            <h2>Space Weather</h2>
-            <span class="updated" id="weather-updated">--</span>
-        </div>
-        <div class="panel-body">
-            <div class="weather-grid" id="weather-grid">
-                <div class="weather-stat">
-                    <div class="value" id="w-kp" style="color:var(--accent-green)">--</div>
-                    <div class="label">Kp Index</div>
-                </div>
-                <div class="weather-stat">
-                    <div class="value" id="w-wind" style="color:var(--accent-cyan)">--</div>
-                    <div class="label">Wind km/s</div>
-                </div>
-                <div class="weather-stat">
-                    <div class="value" id="w-bt" style="color:var(--accent-cyan)">--</div>
-                    <div class="label">Bt (nT)</div>
-                </div>
-                <div class="weather-stat">
-                    <div class="value" id="w-bz" style="color:var(--accent-green)">--</div>
-                    <div class="label">Bz (nT)</div>
-                </div>
-                <div class="weather-stat">
-                    <div class="value" id="w-sfi" style="color:var(--accent-cyan)">--</div>
-                    <div class="label">SFI (10.7cm)</div>
-                </div>
-                <div class="weather-stat">
-                    <div class="value" id="w-flare" style="color:var(--accent-green)">--</div>
-                    <div class="label">Latest Flare</div>
-                </div>
-            </div>
-
-            <!-- NOAA R/S/G Scales -->
-            <div class="scale-row" id="scale-row">
-                <div class="scale-badge" id="scale-r" style="color:var(--accent-green)">
-                    0<span class="scale-label">Radio</span>
-                </div>
-                <div class="scale-badge" id="scale-s" style="color:var(--accent-green)">
-                    0<span class="scale-label">Solar</span>
-                </div>
-                <div class="scale-badge" id="scale-g" style="color:var(--accent-green)">
-                    0<span class="scale-label">Geomag</span>
-                </div>
-            </div>
-
-            <!-- Kp Chart -->
-            <div class="kp-chart-container">
-                <canvas id="kp-chart"></canvas>
-            </div>
-        </div>
-    </section>
-
-    <!-- Launches -->
-    <section class="panel panel-launches">
-        <div class="panel-header">
-            <h2>Launches</h2>
-            <span class="updated" id="launches-updated">--</span>
-        </div>
-        <div class="panel-body" id="launches-body">
-            <div class="loading-skeleton"></div>
-            <div class="loading-skeleton" style="width:80%"></div>
-            <div class="loading-skeleton" style="width:60%"></div>
-        </div>
-    </section>
-
-    <!-- NEO Watch -->
-    <section class="panel panel-neo">
-        <div class="panel-header">
-            <h2>Near-Earth Objects</h2>
-            <span class="updated" id="neo-updated">--</span>
-        </div>
-        <div class="panel-body" id="neo-body">
-            <div class="loading-skeleton"></div>
-            <div class="loading-skeleton" style="width:80%"></div>
-        </div>
-    </section>
-
-    <!-- Alerts & Events -->
-    <section class="panel panel-alerts">
-        <div class="panel-header">
-            <h2>Alerts & Solar Events</h2>
-            <span class="updated" id="alerts-updated">--</span>
-        </div>
-        <div class="panel-body" id="alerts-body">
-            <div class="loading-skeleton"></div>
-            <div class="loading-skeleton" style="width:90%"></div>
-        </div>
-    </section>
-
-    <!-- News -->
-    <section class="panel panel-news">
-        <div class="panel-header">
-            <h2>Space News</h2>
-            <span class="updated" id="news-updated">--</span>
-        </div>
-        <div class="panel-body" id="news-body">
-            <div class="loading-skeleton"></div>
-            <div class="loading-skeleton" style="width:70%"></div>
-        </div>
-    </section>
-
-    <!-- Astronauts -->
-    <section class="panel panel-astronauts">
-        <div class="panel-header">
-            <h2>Humans in Space</h2>
-            <span class="updated" id="astro-updated">--</span>
-        </div>
-        <div class="panel-body">
-            <div class="astronaut-grid" id="astronaut-grid">
-                <div class="loading-skeleton" style="width:200px;height:50px"></div>
-            </div>
-        </div>
-    </section>
-
-</main>
-
-<!-- Scripts -->
 <script src="/static/js/charts.js"></script>
 <script src="/static/js/satellite.js"></script>
+<script src="/static/js/pages.js"></script>
 <script src="/static/js/app.js"></script>
 
 </body>
