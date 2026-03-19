@@ -1,39 +1,94 @@
 <!DOCTYPE html>
 <html><head>
+<style>body{background:#000;color:#0f0;font:12px monospace;padding:10px} .err{color:#f00} .ok{color:#0f0} .warn{color:#ff0}</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-</head>
-<body style="background:#000;color:#0f0;font-family:monospace;padding:20px">
+<link rel="stylesheet" href="/static/css/style.css?v=6">
+</head><body>
 <div id="log"></div>
+<div id="content" style="display:none"></div>
+<div id="scanline-overlay"></div>
 <script>
-function log(msg) {
-    document.getElementById('log').innerHTML += msg + '<br>';
-    console.log(msg);
+function log(msg, cls) {
+    document.getElementById('log').innerHTML += '<div class="'+(cls||'ok')+'">'+msg+'</div>';
 }
-window.onerror = function(msg, src, line, col, err) {
-    log('ERROR: ' + msg + ' at ' + src + ':' + line + ':' + col);
+window.onerror = function(msg, src, line, col) {
+    log('JS ERROR: ' + msg + ' at line ' + line, 'err');
     return true;
 };
 </script>
+<script src="/static/js/charts.js?v=6"></script>
+<script src="/static/js/satellite.js?v=6"></script>
+<script src="/static/js/pages.js?v=6"></script>
 <script>
-log('Loading charts.js...');
-</script>
-<script src="/static/js/charts.js?v=5"></script>
-<script>
-log('charts.js OK. Loading satellite.js...');
-</script>
-<script src="/static/js/satellite.js?v=5"></script>
-<script>
-log('satellite.js OK. Loading pages.js...');
-</script>
-<script src="/static/js/pages.js?v=5"></script>
-<script>
-log('pages.js OK. Pages defined: ' + Object.keys(Pages).join(', '));
-log('Loading app.js...');
-</script>
-<script src="/static/js/app.js?v=5"></script>
-<script>
-log('app.js OK. All scripts loaded.');
-log('typeof Pages.cmd = ' + typeof Pages.cmd);
+log('All scripts loaded. Pages: ' + Object.keys(Pages).join(', '));
+
+// Test each page render
+var allPages = Object.keys(Pages);
+var idx = 0;
+function testNext() {
+    if (idx >= allPages.length) {
+        log('=== ALL PAGES TESTED ===', 'ok');
+        // Now test APIs
+        testAPIs();
+        return;
+    }
+    var name = allPages[idx++];
+    var el = document.getElementById('content');
+    el.style.display = 'block';
+    el.innerHTML = '';
+    log('Testing page: ' + name + '...', 'warn');
+    try {
+        var result = Pages[name](el);
+        if (result && result.then) {
+            result.then(function() {
+                log('  ' + name + ': rendered OK', 'ok');
+                setTimeout(testNext, 500);
+            }).catch(function(e) {
+                log('  ' + name + ': ASYNC ERROR: ' + e.message, 'err');
+                setTimeout(testNext, 500);
+            });
+        } else {
+            log('  ' + name + ': rendered OK (sync)', 'ok');
+            setTimeout(testNext, 500);
+        }
+    } catch(e) {
+        log('  ' + name + ': RENDER ERROR: ' + e.message, 'err');
+        setTimeout(testNext, 500);
+    }
+}
+
+function testAPIs() {
+    log('--- API TESTS ---', 'warn');
+    var apis = [
+        '/api/status', '/api/launches', '/api/weather', '/api/news',
+        '/api/adversary/stats', '/api/missile-asat/summary',
+        '/api/ground-stations/summary', '/api/wargame/scenarios',
+        '/api/futures/summary', '/api/incidents/stats',
+        '/api/threat/overview', '/api/intel/sitrep'
+    ];
+    var i = 0;
+    function nextAPI() {
+        if (i >= apis.length) { log('=== DONE ===', 'ok'); return; }
+        var url = apis[i++];
+        fetch(url).then(function(r) {
+            log('  ' + url + ': HTTP ' + r.status, r.ok ? 'ok' : 'err');
+            nextAPI();
+        }).catch(function(e) {
+            log('  ' + url + ': FAILED: ' + e.message, 'err');
+            nextAPI();
+        });
+    }
+    nextAPI();
+}
+
+// Need these globals for pages that reference them
+window._pageIntervals = [];
+window._extraMaps = [];
+function registerInterval(fn, ms) { var id = setInterval(fn, ms); window._pageIntervals.push(id); return id; }
+function storeMap(m) { window._extraMaps.push(m); }
+
+testNext();
 </script>
 </body></html>
