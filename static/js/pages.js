@@ -1,7 +1,8 @@
 /* ============================================================
    FVEY SDA — Page Renderers
    Combined Space Operations Center Display
-   ECHELON VANTAGE — 11 Pages — Full Intelligence Dashboard
+   ECHELON VANTAGE — 14 Pages — Full Intelligence Dashboard
+   v3.0 — Final Polish Pass
    ============================================================ */
 
 const Pages = {};
@@ -12,10 +13,10 @@ function timeAgo(d) {
     const diff = Date.now() - new Date(d).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1) return 'JUST NOW';
-    if (m < 60) return `${m}M AGO`;
+    if (m < 60) return m + 'M AGO';
     const h = Math.floor(m / 60);
-    if (h < 24) return `${h}H AGO`;
-    return `${Math.floor(h / 24)}D AGO`;
+    if (h < 24) return h + 'H AGO';
+    return Math.floor(h / 24) + 'D AGO';
 }
 
 function countdown(d) {
@@ -28,19 +29,19 @@ function countdown(d) {
     const hh = String(h).padStart(2, '0');
     const mm = String(m).padStart(2, '0');
     const ss = String(s).padStart(2, '0');
-    if (dd > 0) return `T-${dd}D ${hh}:${mm}:${ss}`;
-    return `T-${hh}:${mm}:${ss}`;
+    if (dd > 0) return 'T-' + dd + 'D ' + hh + ':' + mm + ':' + ss;
+    return 'T-' + hh + ':' + mm + ':' + ss;
 }
 
 function badge(level) {
-    const l = (level || 'medium').toLowerCase();
-    return `<span class="badge badge-${l}">${l.toUpperCase()}</span>`;
+    var l = (level || 'medium').toLowerCase();
+    return '<span class="badge badge-' + l + '">' + l.toUpperCase() + '</span>';
 }
 
 function countryBadge(c) {
-    const map = { PRC: 'prc', CIS: 'cis', NKOR: 'nkor', IRAN: 'iran', US: 'fvey', UK: 'fvey', CA: 'fvey', AU: 'fvey', NZ: 'fvey' };
-    const names = { PRC: 'PRC', CIS: 'RUS', NKOR: 'DPRK', IRAN: 'IRAN', US: 'US', UK: 'UK', CA: 'CA', AU: 'AU', NZ: 'NZ' };
-    return `<span class="badge badge-${map[c] || 'fvey'}">${names[c] || c}</span>`;
+    var map = { PRC: 'prc', CIS: 'cis', NKOR: 'nkor', IRAN: 'iran', US: 'fvey', UK: 'fvey', CA: 'fvey', AU: 'fvey', NZ: 'fvey' };
+    var names = { PRC: 'PRC', CIS: 'RUS', NKOR: 'DPRK', IRAN: 'IRAN', US: 'US', UK: 'UK', CA: 'CA', AU: 'AU', NZ: 'NZ' };
+    return '<span class="badge badge-' + (map[c] || 'fvey') + '">' + (names[c] || c) + '</span>';
 }
 
 function countryColor(c) {
@@ -57,7 +58,7 @@ function zuluFull() {
 
 async function api(url) {
     try {
-        const r = await fetch(url);
+        var r = await fetch(url);
         return r.ok ? await r.json() : null;
     } catch (e) {
         return null;
@@ -65,7 +66,7 @@ async function api(url) {
 }
 
 function registerInterval(fn, ms) {
-    const id = setInterval(fn, ms);
+    var id = setInterval(fn, ms);
     if (!window._pageIntervals) window._pageIntervals = [];
     window._pageIntervals.push(id);
     return id;
@@ -77,12 +78,12 @@ function storeMap(map) {
 }
 
 function makeMap(elementId, center, zoom) {
-    const el = document.getElementById(elementId);
+    var el = document.getElementById(elementId);
     if (!el) return null;
     if (!el.style.height || el.offsetHeight < 50) {
         el.style.height = Math.max(400, window.innerHeight - 300) + 'px';
     }
-    const map = L.map(elementId, {
+    var map = L.map(elementId, {
         center: center || [20, 0],
         zoom: zoom || 2,
         minZoom: 2,
@@ -91,23 +92,32 @@ function makeMap(elementId, center, zoom) {
     });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
     if (typeof addGridOverlay === 'function') addGridOverlay(map);
-    setTimeout(() => map.invalidateSize(), 200);
-    setTimeout(() => map.invalidateSize(), 1000);
+    setTimeout(function() { map.invalidateSize(); }, 200);
+    setTimeout(function() { map.invalidateSize(); }, 1000);
     return map;
 }
 
 function severityDots(level) {
-    const levels = ['low', 'medium', 'high', 'critical'];
-    const idx = levels.indexOf((level || 'medium').toLowerCase());
-    return `<span class="severity-dots">${levels.map((l, i) =>
-        `<span class="severity-dot ${i <= idx ? 'filled-' + l : 'empty'}"></span>`
-    ).join('')}</span>`;
+    var levels = ['low', 'medium', 'high', 'critical'];
+    var idx = levels.indexOf((level || 'medium').toLowerCase());
+    var html = '<span class="severity-dots">';
+    for (var i = 0; i < levels.length; i++) {
+        html += '<span class="severity-dot ' + (i <= idx ? 'filled-' + levels[i] : 'empty') + '"></span>';
+    }
+    html += '</span>';
+    return html;
 }
 
 function resilienceColor(score) {
     if (score >= 70) return 'var(--green)';
     if (score >= 40) return 'var(--amber)';
     return 'var(--red)';
+}
+
+function resilienceLabel(score) {
+    if (score >= 70) return 'ADEQUATE';
+    if (score >= 40) return 'DEGRADED';
+    return 'CRITICAL';
 }
 
 function overmatchColor(score) {
@@ -123,43 +133,68 @@ function overmatchVerdict(score) {
 }
 
 function livePulse(label, cls) {
-    return `<span class="live-pulse ${cls || ''}">${label || 'LIVE'}</span>`;
+    return '<span class="live-pulse ' + (cls || '') + '">' + (label || 'LIVE') + '</span>';
 }
 
-function lastUpdated(id) {
-    return `<span class="ph-meta" id="${id}" style="font-size:8px;color:var(--text-muted)">--</span>`;
+function liveIndicator(label) {
+    return '<span class="live-indicator"><span class="live-indicator-dot"></span>' + (label || 'LIVE') + '</span>';
 }
 
-function setTimestamp(id) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = zulu();
-}
-
-const ADV_PROVIDERS = ['CASC', 'China', 'Roscosmos', 'Russia', 'IRGC', 'Iran', 'DPRK', 'Korea', 'Khrunichev', 'Progress', 'ExPace', 'CASIC', 'Galactic Energy', 'LandSpace', 'iSpace', 'CAS Space', 'Orienspace', 'Space Pioneer'];
+var ADV_PROVIDERS = ['CASC', 'China', 'Roscosmos', 'Russia', 'IRGC', 'Iran', 'DPRK', 'Korea', 'Khrunichev', 'Progress', 'ExPace', 'CASIC', 'Galactic Energy', 'LandSpace', 'iSpace', 'CAS Space', 'Orienspace', 'Space Pioneer'];
 
 function isAdvLaunch(l) {
-    return ADV_PROVIDERS.some(p => (l.provider || '').includes(p) || (l.name || '').includes(p));
+    return ADV_PROVIDERS.some(function(p) { return (l.provider || '').includes(p) || (l.name || '').includes(p); });
 }
 
 function satPopup(name, color, fields) {
-    return `<div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#e0e8f0;background:#000;padding:8px;min-width:200px">
-        <div style="color:${color};margin-bottom:4px;font-size:11px">${name}</div>
-        ${fields.map(f => `<div>${f}</div>`).join('')}
-    </div>`;
+    var html = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:10px;color:#e0e8f0;background:#000;padding:8px;min-width:200px">';
+    html += '<div style="color:' + color + ';margin-bottom:4px;font-size:11px;letter-spacing:0.5px">' + name + '</div>';
+    for (var i = 0; i < fields.length; i++) {
+        html += '<div>' + fields[i] + '</div>';
+    }
+    html += '</div>';
+    return html;
 }
 
 function buildOvermatchBar(label, score) {
-    const color = overmatchColor(score);
-    const absScore = Math.abs(score);
-    const pct = (absScore / 100) * 50;
-    const isPositive = score >= 0;
-    return `<div class="overmatch-bar-container">
-        <span class="overmatch-bar-label">${label}</span>
-        <div class="overmatch-bar-track">
-            <div class="overmatch-bar-fill ${isPositive ? 'positive' : 'negative'}" style="width:${pct}%;background:${color};${isPositive ? '' : 'right:auto;left:calc(50% - ' + pct + '%);'}"></div>
-        </div>
-        <span class="overmatch-bar-score" style="color:${color}">${score > 0 ? '+' : ''}${score}</span>
-    </div>`;
+    var color = overmatchColor(score);
+    var absScore = Math.abs(score);
+    var pct = (absScore / 100) * 50;
+    var isPositive = score >= 0;
+    var fillStyle = 'width:' + pct + '%;background:' + color + ';';
+    if (!isPositive) fillStyle += 'right:auto;left:calc(50% - ' + pct + '%);';
+    return '<div class="overmatch-bar-container">' +
+        '<span class="overmatch-bar-label">' + label + '</span>' +
+        '<div class="overmatch-bar-track">' +
+        '<div class="overmatch-bar-fill ' + (isPositive ? 'positive' : 'negative') + '" style="' + fillStyle + '"></div>' +
+        '</div>' +
+        '<span class="overmatch-bar-score" style="color:' + color + '">' + (score > 0 ? '+' : '') + score + '</span>' +
+        '</div>';
+}
+
+function buildHotspotBar(label, value, max, color) {
+    var pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+    return '<div class="hotspot-bar-row">' +
+        '<span class="hotspot-bar-label">' + label + '</span>' +
+        '<div class="hotspot-bar-track">' +
+        '<div class="hotspot-bar-fill" style="width:' + pct + '%;background:' + (color || 'var(--red)') + '"></div>' +
+        '</div>' +
+        '<span class="hotspot-bar-val">' + value + '</span>' +
+        '</div>';
+}
+
+function buildResilienceBar(label, score, sevBadge) {
+    var col = resilienceColor(score);
+    var lbl = resilienceLabel(score);
+    return '<div class="resilience-meter">' +
+        '<span class="resilience-label">' + label + '</span>' +
+        (sevBadge || '') +
+        '<div class="resilience-bar-track">' +
+        '<div class="resilience-bar-fill" style="width:' + score + '%;background:' + col + '"></div>' +
+        '</div>' +
+        '<span class="resilience-score" style="color:' + col + '">' + score + '%</span>' +
+        '<span class="resilience-status" style="color:' + col + '">' + lbl + '</span>' +
+        '</div>';
 }
 
 
@@ -168,129 +203,128 @@ function buildOvermatchBar(label, score) {
    Primary warfighting display -- map-dominant
    ================================================================ */
 Pages.cmd = async function (el) {
-    const vh = window.innerHeight;
-    const chromeH = 80;
-    const threatBarH = 44;
-    const bottomStripH = 155;
-    const envBarH = 56;
-    const mapH = Math.max(300, vh - chromeH - threatBarH - bottomStripH - envBarH - 8);
+    var vh = window.innerHeight;
+    var chromeH = 80;
+    var threatBarH = 44;
+    var bottomStripH = 155;
+    var envBarH = 56;
+    var mapH = Math.max(300, vh - chromeH - threatBarH - bottomStripH - envBarH - 8);
 
-    el.innerHTML = `
-        <div class="cmd-page">
-        <!-- THREAT STATUS BAR -->
-        <div class="threat-bar">
-            <div class="tb-cell hostile">
-                <div class="tb-icon">&#9760;</div>
-                <div><div class="tb-val" id="ov-prc">--</div><div class="tb-lbl">PRC SATS</div></div>
-            </div>
-            <div class="tb-cell warning">
-                <div class="tb-icon">&#9760;</div>
-                <div><div class="tb-val" id="ov-rus">--</div><div class="tb-lbl">RUS SATS</div></div>
-            </div>
-            <div class="tb-cell hostile">
-                <div class="tb-icon">&#9673;</div>
-                <div><div class="tb-val" id="ov-isr-ct">--</div><div class="tb-lbl">HOSTILE ISR</div></div>
-            </div>
-            <div class="tb-cell alert">
-                <div class="tb-icon">&#9888;</div>
-                <div><div class="tb-val" id="ov-asat-ct">--</div><div class="tb-lbl">CRITICAL ASAT</div></div>
-            </div>
-            <div class="tb-cell info">
-                <div class="tb-icon">&#9678;</div>
-                <div><div class="tb-val" id="ov-total">--</div><div class="tb-lbl">TOTAL TRACKED</div></div>
-            </div>
-            <div class="tb-cell" id="ov-threat-cell">
-                <div class="tb-icon">&#9656;</div>
-                <div><div class="tb-val" id="ov-threat-lvl">--</div><div class="tb-lbl">THREAT LEVEL</div></div>
-            </div>
-        </div>
+    el.innerHTML = '<div class="cmd-page">' +
+        '<!-- THREAT STATUS BAR -->' +
+        '<div class="threat-bar">' +
+            '<div class="tb-cell hostile">' +
+                '<div class="tb-icon">&#9760;</div>' +
+                '<div><div class="tb-val" id="ov-prc">--</div><div class="tb-lbl">PRC SATS</div></div>' +
+            '</div>' +
+            '<div class="tb-cell warning">' +
+                '<div class="tb-icon">&#9760;</div>' +
+                '<div><div class="tb-val" id="ov-rus">--</div><div class="tb-lbl">RUS SATS</div></div>' +
+            '</div>' +
+            '<div class="tb-cell hostile">' +
+                '<div class="tb-icon">&#9673;</div>' +
+                '<div><div class="tb-val" id="ov-isr-ct">--</div><div class="tb-lbl">HOSTILE ISR</div></div>' +
+            '</div>' +
+            '<div class="tb-cell alert">' +
+                '<div class="tb-icon">&#9888;</div>' +
+                '<div><div class="tb-val" id="ov-asat-ct">--</div><div class="tb-lbl">CRITICAL ASAT</div></div>' +
+            '</div>' +
+            '<div class="tb-cell info">' +
+                '<div class="tb-icon">&#9678;</div>' +
+                '<div><div class="tb-val" id="ov-total">--</div><div class="tb-lbl">TOTAL TRACKED</div></div>' +
+            '</div>' +
+            '<div class="tb-cell" id="ov-threat-cell">' +
+                '<div class="tb-icon">&#9656;</div>' +
+                '<div><div class="tb-val" id="ov-threat-lvl">--</div><div class="tb-lbl">THREAT LEVEL</div></div>' +
+            '</div>' +
+        '</div>' +
 
-        <!-- MAP + OVERLAY PANELS -->
-        <div class="cmd-layout" style="height:${mapH}px">
-            <div class="cmd-map-wrap" style="height:${mapH}px">
-                <div id="sat-map" class="map-container" style="height:${mapH}px;min-height:${mapH}px"></div>
-                <div class="map-legend">
-                    <div class="legend-item"><span class="legend-dot" style="background:#FF2020"></span> PRC</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#FF8C00"></span> RUS</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#C040FF"></span> DPRK</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#FFD700"></span> IRAN</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:rgba(32,128,255,0.4)"></span> FVEY</div>
-                    <div class="legend-item" style="color:var(--text-muted)" id="ov-map-ts">--</div>
-                </div>
-                <div class="map-stat-overlay" id="ov-map-stats"></div>
-                <div class="map-overlay-panels">
-                    <div class="overlay-panel">
-                        <div class="op-head">FORCE DISPOSITION ${livePulse('', '')}</div>
-                        <div class="op-body" id="ov-force"></div>
-                    </div>
-                    <div class="overlay-panel">
-                        <div class="op-head">LIVE SITREP ${livePulse('60S', '')}</div>
-                        <div class="op-body" id="ov-sitrep" style="max-height:140px"></div>
-                    </div>
-                    <div class="overlay-panel">
-                        <div class="op-head" style="color:var(--red)">PROXIMITY ALERTS ${livePulse('120S', 'red')}</div>
-                        <div class="op-body" id="ov-proximity" style="max-height:130px"></div>
-                    </div>
-                    <div class="overlay-panel">
-                        <div class="op-head">ADVERSARY LAUNCH ACTIVITY</div>
-                        <div class="op-body" id="ov-adv-launches" style="max-height:130px"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        '<!-- MAP + OVERLAY PANELS -->' +
+        '<div class="cmd-layout" style="height:' + mapH + 'px">' +
+            '<div class="cmd-map-wrap" style="height:' + mapH + 'px">' +
+                '<div id="sat-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div>' +
+                '<div class="map-legend">' +
+                    '<div class="legend-item"><span class="legend-dot" style="background:#FF2020"></span> PRC</div>' +
+                    '<div class="legend-item"><span class="legend-dot" style="background:#FF8C00"></span> RUS</div>' +
+                    '<div class="legend-item"><span class="legend-dot" style="background:#C040FF"></span> DPRK</div>' +
+                    '<div class="legend-item"><span class="legend-dot" style="background:#FFD700"></span> IRAN</div>' +
+                    '<div class="legend-item"><span class="legend-dot" style="background:rgba(32,128,255,0.4)"></span> FVEY</div>' +
+                    '<div class="legend-item" style="color:var(--text-muted)" id="ov-map-ts">--</div>' +
+                '</div>' +
+                '<div class="map-stat-overlay" id="ov-map-stats"></div>' +
+                '<div class="map-overlay-panels">' +
+                    '<div class="overlay-panel">' +
+                        '<div class="op-head">FORCE DISPOSITION ' + liveIndicator('') + '</div>' +
+                        '<div class="op-body" id="ov-force"></div>' +
+                    '</div>' +
+                    '<div class="overlay-panel">' +
+                        '<div class="op-head">LIVE SITREP ' + liveIndicator('60S') + '</div>' +
+                        '<div class="op-body" id="ov-sitrep" style="max-height:140px"></div>' +
+                    '</div>' +
+                    '<div class="overlay-panel" id="prox-panel">' +
+                        '<div class="op-head" style="color:var(--red)">PROXIMITY ALERTS ' + livePulse('120S', 'red') + '</div>' +
+                        '<div class="op-body" id="ov-proximity" style="max-height:130px"></div>' +
+                    '</div>' +
+                    '<div class="overlay-panel">' +
+                        '<div class="op-head">ADVERSARY LAUNCH ACTIVITY ' + liveIndicator('1S') + '</div>' +
+                        '<div class="op-body" id="ov-adv-launches" style="max-height:130px"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
 
-        <!-- BOTTOM STRIPS -->
-        <div class="cmd-bottom-strip">
-            <div class="panel">
-                <div class="panel-head"><h3>HOTSPOT COVERAGE</h3><span class="ph-meta" id="ov-hotspot-meta"></span></div>
-                <div class="panel-body" style="max-height:120px" id="ov-hotspots"></div>
-            </div>
-            <div class="panel">
-                <div class="panel-head"><h3>FVEY VULNERABILITIES</h3><span class="ph-meta"><span class="badge badge-critical">ASSESS</span></span></div>
-                <div class="panel-body" style="max-height:120px" id="ov-vulns"></div>
-            </div>
-            <div class="panel">
-                <div class="panel-head"><h3>OSINT + SOCIAL INTEL</h3><span class="ph-meta" id="ov-news-ts">--</span></div>
-                <div class="panel-body" style="max-height:120px" id="ov-news"></div>
-            </div>
-        </div>
+        '<!-- BOTTOM STRIPS -->' +
+        '<div class="cmd-bottom-strip">' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>HOTSPOT COVERAGE</h3><span class="ph-meta" id="ov-hotspot-meta"></span></div>' +
+                '<div class="panel-body" style="max-height:120px" id="ov-hotspots"></div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>FVEY VULNERABILITIES</h3><span class="ph-meta"><span class="badge badge-critical">ASSESS</span></span></div>' +
+                '<div class="panel-body" style="max-height:120px" id="ov-vulns"></div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>OSINT + SOCIAL INTEL</h3><span class="ph-meta" id="ov-news-ts">--</span></div>' +
+                '<div class="panel-body" style="max-height:120px" id="ov-news"></div>' +
+            '</div>' +
+        '</div>' +
 
-        <!-- ENVIRONMENT BAR -->
-        <div class="env-bar">
-            <div class="env-cell"><span class="env-lbl">Kp</span><span class="env-val" id="ov-kp">--</span></div>
-            <div class="env-cell"><span class="env-lbl">SOLAR WIND</span><span class="env-val" id="ov-wind">--</span></div>
-            <div class="env-cell"><span class="env-lbl">Bz</span><span class="env-val" id="ov-bz">--</span></div>
-            <div class="env-cell"><span class="env-lbl">SFI</span><span class="env-val" id="ov-sfi">--</span></div>
-            <div class="env-cell"><span class="env-lbl">RADIO</span><span class="env-val" id="ov-sr">R0</span></div>
-            <div class="env-cell"><span class="env-lbl">SOLAR</span><span class="env-val" id="ov-ss">S0</span></div>
-            <div class="env-cell"><span class="env-lbl">GEOMAG</span><span class="env-val" id="ov-sg">G0</span></div>
-            <div class="env-cell"><span class="env-lbl">NEOs</span><span class="env-val" id="ov-neo">--</span></div>
-            <div class="cmd-kp-chart-wrap"><canvas id="kp-chart" height="50"></canvas></div>
-        </div>
-        </div>`;
+        '<!-- ENVIRONMENT BAR -->' +
+        '<div class="env-bar">' +
+            '<div class="env-cell"><span class="env-lbl">Kp</span><span class="env-val" id="ov-kp">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">SOLAR WIND</span><span class="env-val" id="ov-wind">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">Bz</span><span class="env-val" id="ov-bz">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">SFI</span><span class="env-val" id="ov-sfi">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">RADIO</span><span class="env-val" id="ov-sr">R0</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">SOLAR</span><span class="env-val" id="ov-ss">S0</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">GEOMAG</span><span class="env-val" id="ov-sg">G0</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">NEOs</span><span class="env-val" id="ov-neo">--</span></div>' +
+            '<div class="cmd-kp-chart-wrap"><canvas id="kp-chart" height="50"></canvas></div>' +
+        '</div>' +
+        '</div>';
 
     // Init satellite map with explicit pixel height
-    setTimeout(() => {
-        const mapEl = document.getElementById('sat-map');
+    setTimeout(function() {
+        var mapEl = document.getElementById('sat-map');
         if (!mapEl) return;
         mapEl.style.height = mapH + 'px';
         if (typeof initSatMap === 'function') {
             initSatMap('sat-map');
             if (satMap) {
-                setTimeout(() => satMap.invalidateSize(), 200);
-                setTimeout(() => satMap.invalidateSize(), 600);
-                setTimeout(() => satMap.invalidateSize(), 1500);
+                setTimeout(function() { satMap.invalidateSize(); }, 200);
+                setTimeout(function() { satMap.invalidateSize(); }, 600);
+                setTimeout(function() { satMap.invalidateSize(); }, 1500);
             }
         }
     }, 100);
 
     // Init Kp chart
-    setTimeout(() => {
+    setTimeout(function() {
         if (typeof initKpChart === 'function') initKpChart();
     }, 200);
 
     // Fetch all data in parallel
-    const [advStats, launches, weather, neo, news, criticalSystems, vulns, stats, sitrep, hotspots, social, proximity] = await Promise.all([
+    var results = await Promise.all([
         api('/api/adversary/stats'),
         api('/api/launches'),
         api('/api/weather'),
@@ -305,15 +339,28 @@ Pages.cmd = async function (el) {
         api('/api/intel/proximity'),
     ]);
 
+    var advStats = results[0];
+    var launches = results[1];
+    var weather = results[2];
+    var neo = results[3];
+    var news = results[4];
+    var criticalSystems = results[5];
+    var vulns = results[6];
+    var stats = results[7];
+    var sitrep = results[8];
+    var hotspots = results[9];
+    var social = results[10];
+    var proximity = results[11];
+
     // --- Threat bar ---
     if (advStats) {
-        const prc = advStats.PRC || {};
-        const cis = advStats.CIS || {};
-        const nkor = advStats.NKOR || {};
-        const iran = advStats.IRAN || {};
-        document.getElementById('ov-prc').textContent = prc.total || 0;
-        document.getElementById('ov-rus').textContent = cis.total || 0;
-        document.getElementById('ov-isr-ct').textContent = (prc.military_isr || 0) + (cis.military_isr || 0) + (nkor.military_isr || 0) + (iran.military_isr || 0);
+        var prcS = advStats.PRC || {};
+        var cisS = advStats.CIS || {};
+        var nkorS = advStats.NKOR || {};
+        var iranS = advStats.IRAN || {};
+        document.getElementById('ov-prc').textContent = prcS.total || 0;
+        document.getElementById('ov-rus').textContent = cisS.total || 0;
+        document.getElementById('ov-isr-ct').textContent = (prcS.military_isr || 0) + (cisS.military_isr || 0) + (nkorS.military_isr || 0) + (iranS.military_isr || 0);
     }
     if (stats) {
         document.getElementById('ov-total').textContent = (stats.total_tracked || 0).toLocaleString();
@@ -324,9 +371,9 @@ Pages.cmd = async function (el) {
 
     // Sitrep threat level
     if (sitrep) {
-        const lvl = (sitrep.threat_level || 'HIGH').toUpperCase();
-        const tlEl = document.getElementById('ov-threat-lvl');
-        const tcEl = document.getElementById('ov-threat-cell');
+        var lvl = (sitrep.threat_level || 'HIGH').toUpperCase();
+        var tlEl = document.getElementById('ov-threat-lvl');
+        var tcEl = document.getElementById('ov-threat-cell');
         if (tlEl) {
             tlEl.textContent = lvl;
             tlEl.style.color = lvl === 'CRITICAL' ? 'var(--red)' : lvl === 'HIGH' ? 'var(--cis)' : 'var(--amber)';
@@ -337,163 +384,192 @@ Pages.cmd = async function (el) {
     }
 
     // Map stat overlay
-    const mapStatsEl = document.getElementById('ov-map-stats');
+    var mapStatsEl = document.getElementById('ov-map-stats');
     if (mapStatsEl && advStats && stats) {
-        const totalAdv = (advStats.PRC?.total || 0) + (advStats.CIS?.total || 0) + (advStats.NKOR?.total || 0) + (advStats.IRAN?.total || 0);
-        const totalISR = (advStats.PRC?.military_isr || 0) + (advStats.CIS?.military_isr || 0);
-        mapStatsEl.innerHTML = `
-            <div class="map-stat-item" style="border-left:2px solid var(--red)">
-                <div><div class="map-stat-val" style="color:var(--red)">${totalAdv}</div><div class="map-stat-lbl">HOSTILE ON ORBIT</div></div>
-            </div>
-            <div class="map-stat-item" style="border-left:2px solid var(--cyan)">
-                <div><div class="map-stat-val" style="color:var(--cyan)">${(stats.active_payloads || 0).toLocaleString()}</div><div class="map-stat-lbl">ACTIVE PAYLOADS</div></div>
-            </div>
-            <div class="map-stat-item" style="border-left:2px solid var(--amber)">
-                <div><div class="map-stat-val" style="color:var(--amber)">${totalISR}</div><div class="map-stat-lbl">ISR OVERHEAD</div></div>
-            </div>`;
+        var totalAdv = (advStats.PRC ? advStats.PRC.total : 0) + (advStats.CIS ? advStats.CIS.total : 0) + (advStats.NKOR ? advStats.NKOR.total : 0) + (advStats.IRAN ? advStats.IRAN.total : 0);
+        var totalISR = (advStats.PRC ? advStats.PRC.military_isr : 0) + (advStats.CIS ? advStats.CIS.military_isr : 0);
+        mapStatsEl.innerHTML =
+            '<div class="map-stat-item" style="border-left:2px solid var(--red)">' +
+                '<div><div class="map-stat-val" style="color:var(--red)">' + totalAdv + '</div><div class="map-stat-lbl">HOSTILE ON ORBIT</div></div>' +
+            '</div>' +
+            '<div class="map-stat-item" style="border-left:2px solid var(--cyan)">' +
+                '<div><div class="map-stat-val" style="color:var(--cyan)">' + (stats.active_payloads || 0).toLocaleString() + '</div><div class="map-stat-lbl">ACTIVE PAYLOADS</div></div>' +
+            '</div>' +
+            '<div class="map-stat-item" style="border-left:2px solid var(--amber)">' +
+                '<div><div class="map-stat-val" style="color:var(--amber)">' + totalISR + '</div><div class="map-stat-lbl">ISR OVERHEAD</div></div>' +
+            '</div>';
     }
 
     // Adversary launches
-    let advLaunches = [];
+    var advLaunches = [];
     if (launches) {
-        advLaunches = launches.filter(l => isAdvLaunch(l));
+        advLaunches = launches.filter(function(l) { return isAdvLaunch(l); });
     }
 
     // --- Force Disposition ---
     if (advStats) {
-        const nations = [
+        var nations = [
             { code: 'PRC', name: 'PRC', data: advStats.PRC, color: '#FF2020' },
             { code: 'CIS', name: 'RUS', data: advStats.CIS, color: '#FF8C00' },
             { code: 'NKOR', name: 'DPRK', data: advStats.NKOR, color: '#C040FF' },
             { code: 'IRAN', name: 'IRAN', data: advStats.IRAN, color: '#FFD700' },
         ];
-        document.getElementById('ov-force').innerHTML = nations.map(n => {
-            const d = n.data || {};
-            const total = d.total || 0;
-            const barMax = 600;
-            const isr = d.military_isr || 0;
-            const nav = d.navigation || 0;
-            const cats = d.by_category || {};
-            const comms = cats.comms || 0;
-            const sda = cats.sda_asat || 0;
-            return `
-                <div class="fd-row">
-                    <span class="fd-nation" style="color:${n.color}">${n.name}</span>
-                    <div class="fd-bar-wrap"><div class="fd-bar" style="width:${Math.min(total / barMax * 100, 100)}%;background:${n.color}"></div></div>
-                    <span class="fd-count">${total}</span>
-                </div>
-                <div style="display:flex;gap:6px;margin:0 0 4px 54px;font-size:8px;color:var(--text-muted)">
-                    ${isr ? `<span>ISR:${isr}</span>` : ''}
-                    ${nav ? `<span>NAV:${nav}</span>` : ''}
-                    ${comms ? `<span>COM:${comms}</span>` : ''}
-                    ${sda ? `<span style="color:var(--red)">ASAT:${sda}</span>` : ''}
-                </div>`;
-        }).join('');
+        var forceHtml = '';
+        nations.forEach(function(n) {
+            var d = n.data || {};
+            var total = d.total || 0;
+            var barMax = 600;
+            var isr = d.military_isr || 0;
+            var nav = d.navigation || 0;
+            var cats = d.by_category || {};
+            var comms = cats.comms || 0;
+            var sdaAsat = cats.sda_asat || 0;
+            forceHtml += '<div class="fd-row">' +
+                '<span class="fd-nation" style="color:' + n.color + '">' + n.name + '</span>' +
+                '<div class="fd-bar-wrap"><div class="fd-bar" style="width:' + Math.min(total / barMax * 100, 100) + '%;background:' + n.color + '"></div></div>' +
+                '<span class="fd-count">' + total + '</span>' +
+                '</div>' +
+                '<div style="display:flex;gap:6px;margin:0 0 4px 54px;font-size:8px;color:var(--text-muted)">';
+            if (isr) forceHtml += '<span>ISR:' + isr + '</span>';
+            if (nav) forceHtml += '<span>NAV:' + nav + '</span>';
+            if (comms) forceHtml += '<span>COM:' + comms + '</span>';
+            if (sdaAsat) forceHtml += '<span style="color:var(--red)">ASAT:' + sdaAsat + '</span>';
+            forceHtml += '</div>';
+        });
+        document.getElementById('ov-force').innerHTML = forceHtml;
     }
 
     // --- Live SITREP ---
     function renderSitrep(data) {
-        const sitEl = document.getElementById('ov-sitrep');
+        var sitEl = document.getElementById('ov-sitrep');
         if (!sitEl || !data) return;
-        const events = data.key_events || [];
-        sitEl.innerHTML = `
-            <div style="font-size:9px;color:var(--text);line-height:1.5;margin-bottom:4px">${(data.assessment || '').substring(0, 180)}${(data.assessment || '').length > 180 ? '...' : ''}</div>
-            ${events.slice(0, 4).map(e => `
-                <div style="padding:2px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:9px">
-                    ${badge(e.severity || 'medium')} <span style="color:var(--white)">${e.description || e.event || e.title || ''}</span>
-                </div>
-            `).join('')}
-            <div style="font-size:7px;color:var(--text-muted);margin-top:3px">${data.timestamp ? timeAgo(data.timestamp) : zulu()}</div>`;
+        var events = data.key_events || [];
+        var html = '<div style="font-size:9px;color:var(--text);line-height:1.5;margin-bottom:4px">' + ((data.assessment || '').substring(0, 180)) + ((data.assessment || '').length > 180 ? '...' : '') + '</div>';
+        events.slice(0, 4).forEach(function(e) {
+            var desc = e.description || e.event || e.title || '';
+            html += '<div style="padding:2px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:9px">' +
+                badge(e.severity || 'medium') + ' <span style="color:var(--white)">' + desc + '</span></div>';
+        });
+        html += '<div style="font-size:7px;color:var(--text-muted);margin-top:3px">' + (data.timestamp ? timeAgo(data.timestamp) : zulu()) + '</div>';
+        sitEl.innerHTML = html;
     }
     renderSitrep(sitrep);
 
     // --- Proximity Alerts ---
     function renderProximity(data) {
-        const proxEl = document.getElementById('ov-proximity');
+        var proxEl = document.getElementById('ov-proximity');
+        var proxPanel = document.getElementById('prox-panel');
         if (!proxEl) return;
         if (!data || !data.alerts || !data.alerts.length) {
             proxEl.innerHTML = '<div style="font-size:9px;color:var(--green);text-align:center;padding:6px">NO ACTIVE PROXIMITY ALERTS</div>';
+            if (proxPanel) proxPanel.classList.remove('proximity-flash');
             return;
         }
-        proxEl.innerHTML = `
-            <div style="font-size:8px;color:var(--red);letter-spacing:1px;margin-bottom:3px">${data.total_alerts || data.alerts.length} ACTIVE ALERTS</div>
-            ${data.alerts.slice(0, 5).map(a => `
-                <div class="prox-alert">
-                    <div style="display:flex;justify-content:space-between;align-items:center">
-                        <span style="color:var(--white);font-size:9px">${a.fvey_sat || '?'}</span>
-                        <span class="prox-alert-dist">${a.distance_km ? Math.round(a.distance_km) + ' KM' : '?'}</span>
-                    </div>
-                    <div style="font-size:8px;color:var(--text-muted)">THREAT: ${a.adversary_sat || '?'} | ${badge(a.classification || 'high')}</div>
-                </div>
-            `).join('')}
-            <div style="font-size:7px;color:var(--text-muted);margin-top:3px">${zulu()}</div>`;
+        // Flash animation on active alerts
+        if (proxPanel) proxPanel.classList.add('proximity-flash');
+        var html = '<div style="font-size:8px;color:var(--red);letter-spacing:1px;margin-bottom:3px;animation:blink-text 1.5s step-end infinite">' +
+            '&#9888; ' + (data.total_alerts || data.alerts.length) + ' ACTIVE ALERTS</div>';
+        data.alerts.slice(0, 5).forEach(function(a) {
+            html += '<div class="prox-alert">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center">' +
+                '<span style="color:var(--white);font-size:9px">' + (a.fvey_sat || '?') + '</span>' +
+                '<span class="prox-alert-dist">' + (a.distance_km ? Math.round(a.distance_km) + ' KM' : '?') + '</span>' +
+                '</div>' +
+                '<div style="font-size:8px;color:var(--text-muted)">THREAT: ' + (a.adversary_sat || '?') + ' | ' + badge(a.classification || 'high') + '</div>' +
+                '</div>';
+        });
+        html += '<div style="font-size:7px;color:var(--text-muted);margin-top:3px">' + zulu() + '</div>';
+        proxEl.innerHTML = html;
     }
     renderProximity(proximity);
 
-    // --- Adversary Launches (live countdown) ---
+    // --- Adversary Launches (live countdown every second) ---
     function renderAdvLaunches() {
-        const body = document.getElementById('ov-adv-launches');
+        var body = document.getElementById('ov-adv-launches');
         if (!body) return;
         if (!advLaunches.length) { body.innerHTML = '<div class="empty-state">NO ADV LAUNCHES SCHEDULED</div>'; return; }
-        body.innerHTML = advLaunches.slice(0, 5).map(l => `
-            <div class="launch-line ll-adv">
-                <div class="ll-name">${l.name}</div>
-                <div class="ll-detail">${l.provider} | ${l.pad_location || '?'}</div>
-                <div class="ll-countdown">${l.net ? countdown(l.net) : 'TBD'}</div>
-            </div>
-        `).join('');
+        var html = '';
+        advLaunches.slice(0, 5).forEach(function(l) {
+            html += '<div class="launch-line ll-adv">' +
+                '<div class="ll-name">&#9760; ' + l.name + '</div>' +
+                '<div class="ll-detail">' + (l.provider || '?') + ' | ' + (l.rocket || '?') + ' | ' + (l.pad_location || '?') + '</div>' +
+                '<div class="ll-countdown">' + (l.net ? countdown(l.net) : 'TBD') + '</div>' +
+                '</div>';
+        });
+        body.innerHTML = html;
     }
     renderAdvLaunches();
     registerInterval(renderAdvLaunches, 1000);
 
-    // --- Hotspot Coverage ---
+    // --- Hotspot Coverage with colored bars ---
     if (hotspots && hotspots.hotspots) {
-        const hs = hotspots.hotspots;
-        document.getElementById('ov-hotspot-meta').innerHTML = `<span class="badge badge-high">${hs.length} ZONES</span>`;
-        document.getElementById('ov-hotspots').innerHTML = hs.slice(0, 6).map(h => `
-            <div class="vuln-line">
-                <span style="color:var(--red);font-size:12px;min-width:28px;text-align:right">${h.total_adversary_passes}</span>
-                <span style="color:var(--white);font-size:10px">${h.name}</span>
-                <span style="font-size:8px;color:var(--text-muted)">${h.passes_by_country ? Object.entries(h.passes_by_country).map(([c, n]) => c + ':' + n).join(' ') : ''}</span>
-            </div>
-        `).join('');
+        var hs = hotspots.hotspots;
+        var maxPasses = 1;
+        hs.forEach(function(h) { if (h.total_adversary_passes > maxPasses) maxPasses = h.total_adversary_passes; });
+        document.getElementById('ov-hotspot-meta').innerHTML = '<span class="badge badge-high">' + hs.length + ' ZONES</span>';
+        var hotspotHtml = '';
+        hs.slice(0, 6).forEach(function(h) {
+            hotspotHtml += '<div class="hotspot-row">' +
+                '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">' +
+                '<span style="color:var(--white);font-size:10px;flex:1">' + h.name + '</span>' +
+                '<span style="color:var(--red);font-size:12px;font-weight:normal">' + h.total_adversary_passes + '</span>' +
+                '</div>';
+            // colored bar
+            hotspotHtml += '<div class="hotspot-bar-track" style="margin-bottom:2px">' +
+                '<div class="hotspot-bar-fill" style="width:' + (h.total_adversary_passes / maxPasses * 100) + '%;background:linear-gradient(90deg,var(--red),var(--cis))"></div>' +
+                '</div>';
+            // per-country mini bars
+            if (h.passes_by_country) {
+                hotspotHtml += '<div style="display:flex;gap:4px;margin-bottom:4px">';
+                Object.keys(h.passes_by_country).forEach(function(c) {
+                    var n = h.passes_by_country[c];
+                    hotspotHtml += '<span style="font-size:7px;color:' + countryColor(c) + '">' + c + ':' + n + '</span>';
+                });
+                hotspotHtml += '</div>';
+            }
+            hotspotHtml += '</div>';
+        });
+        document.getElementById('ov-hotspots').innerHTML = hotspotHtml;
     }
 
     // --- Vulnerabilities ---
     if (vulns) {
-        const sorted = [...vulns].sort((a, b) => {
-            const order = { critical: 0, high: 1, medium: 2, low: 3 };
+        var sorted = vulns.slice().sort(function(a, b) {
+            var order = { critical: 0, high: 1, medium: 2, low: 3 };
             return (order[a.severity] || 9) - (order[b.severity] || 9);
         });
-        document.getElementById('ov-vulns').innerHTML = sorted.slice(0, 6).map(v => `
-            <div class="vuln-line">
-                ${severityDots(v.severity || 'high')}
-                ${badge(v.severity || 'high')}
-                <span style="color:var(--white);font-size:10px">${v.title}</span>
-            </div>
-        `).join('');
+        var vulnHtml = '';
+        sorted.slice(0, 6).forEach(function(v) {
+            vulnHtml += '<div class="vuln-line">' +
+                severityDots(v.severity || 'high') + ' ' +
+                badge(v.severity || 'high') + ' ' +
+                '<span style="color:var(--white);font-size:10px">' + v.title + '</span>' +
+                '</div>';
+        });
+        document.getElementById('ov-vulns').innerHTML = vulnHtml;
     }
 
     // --- OSINT + Social Intel ---
-    const newsEl = document.getElementById('ov-news');
+    var newsEl = document.getElementById('ov-news');
     if (newsEl) {
-        let html = '';
+        var html = '';
         if (news) {
-            html += news.slice(0, 4).map(n => `
-                <a href="${n.url}" target="_blank" rel="noopener" class="news-line">
-                    <span class="nl-title">${n.title}</span>
-                    <span class="nl-meta">${n.news_site || 'OSINT'} // ${timeAgo(n.published_at)}</span>
-                </a>
-            `).join('');
+            news.slice(0, 4).forEach(function(n) {
+                html += '<a href="' + n.url + '" target="_blank" rel="noopener" class="news-line">' +
+                    '<span class="nl-title">' + n.title + '</span>' +
+                    '<span class="nl-meta">' + (n.news_site || 'OSINT') + ' // ' + timeAgo(n.published_at) + '</span>' +
+                    '</a>';
+            });
         }
         if (social && social.length) {
             html += '<div style="border-top:1px solid var(--border);margin:3px 0;padding-top:2px;font-size:7px;letter-spacing:1.5px;color:var(--text-muted)">SOCIAL INTEL</div>';
-            html += social.slice(0, 3).map(s => `
-                <a href="${s.url || '#'}" target="_blank" rel="noopener" class="news-line">
-                    <span class="nl-title" style="color:var(--cyan)">${(s.text || '').substring(0, 80)}${(s.text || '').length > 80 ? '...' : ''}</span>
-                    <span class="nl-meta">${s.platform || '?'} / ${s.author || '?'} // ${s.relevance_score ? 'REL:' + s.relevance_score : ''} ${s.timestamp ? timeAgo(s.timestamp) : ''}</span>
-                </a>
-            `).join('');
+            social.slice(0, 3).forEach(function(s) {
+                var txt = (s.text || '').substring(0, 80);
+                html += '<a href="' + (s.url || '#') + '" target="_blank" rel="noopener" class="news-line">' +
+                    '<span class="nl-title" style="color:var(--cyan)">' + txt + (((s.text || '').length > 80) ? '...' : '') + '</span>' +
+                    '<span class="nl-meta">' + (s.platform || '?') + ' / ' + (s.author || '?') + ' // ' + (s.relevance_score ? 'REL:' + s.relevance_score : '') + ' ' + (s.timestamp ? timeAgo(s.timestamp) : '') + '</span>' +
+                    '</a>';
+            });
         }
         newsEl.innerHTML = html || '<div class="empty-state">NO FEED DATA</div>';
         document.getElementById('ov-news-ts').textContent = zulu();
@@ -502,36 +578,36 @@ Pages.cmd = async function (el) {
     // --- Environment Bar ---
     if (weather) {
         if (weather.kp_current != null) {
-            const kpEl = document.getElementById('ov-kp');
+            var kpEl = document.getElementById('ov-kp');
             kpEl.textContent = weather.kp_current.toFixed(1);
             kpEl.style.color = weather.kp_current < 4 ? 'var(--green)' : weather.kp_current < 6 ? '#FFD700' : 'var(--red)';
         }
         if (weather.solar_wind_speed != null) document.getElementById('ov-wind').textContent = Math.round(weather.solar_wind_speed) + ' KM/S';
         if (weather.bz != null) {
-            const bzEl = document.getElementById('ov-bz');
+            var bzEl = document.getElementById('ov-bz');
             bzEl.textContent = weather.bz.toFixed(1);
             bzEl.style.color = weather.bz < 0 ? 'var(--red)' : 'var(--green)';
         }
         if (weather.sfi != null) document.getElementById('ov-sfi').textContent = Math.round(weather.sfi);
         if (weather.scales) {
-            for (const k of ['R', 'S', 'G']) {
-                const v = weather.scales[k]?.Scale || 0;
-                const scaleEl = document.getElementById('ov-s' + k.toLowerCase());
+            ['R', 'S', 'G'].forEach(function(k) {
+                var v = (weather.scales[k] && weather.scales[k].Scale) || 0;
+                var scaleEl = document.getElementById('ov-s' + k.toLowerCase());
                 if (scaleEl) {
                     scaleEl.textContent = k + v;
                     scaleEl.style.color = v === 0 ? 'var(--green)' : v <= 2 ? '#FFD700' : 'var(--red)';
                 }
-            }
+            });
         }
         if (weather.kp_history && typeof updateKpChart === 'function') {
-            setTimeout(() => updateKpChart(weather.kp_history), 300);
+            setTimeout(function() { updateKpChart(weather.kp_history); }, 300);
         }
     }
     if (neo) document.getElementById('ov-neo').textContent = neo.length;
 
     // --- MAP: Plot adversary & FVEY sats ---
-    setTimeout(async () => {
-        const [prcSats, cisSats, nkorSats, iranSats, fveySats] = await Promise.all([
+    setTimeout(async function() {
+        var satResults = await Promise.all([
             api('/api/adversary/satellites?country=PRC'),
             api('/api/adversary/satellites?country=CIS'),
             api('/api/adversary/satellites?country=NKOR'),
@@ -539,22 +615,27 @@ Pages.cmd = async function (el) {
             api('/api/satellites?group=stations'),
         ]);
 
+        var prcSats = satResults[0];
+        var cisSats = satResults[1];
+        var nkorSats = satResults[2];
+        var iranSats = satResults[3];
+        var fveySats = satResults[4];
+
         if (!satMap) return;
-        satMarkers.forEach(m => satMap.removeLayer(m));
+        satMarkers.forEach(function(m) { satMap.removeLayer(m); });
         satMarkers = [];
 
-        const allAdv = [
-            ...(prcSats || []).map(s => ({ ...s, _c: '#FF2020', _r: s.category === 'military_isr' ? 4 : s.category === 'sda_asat' ? 3.5 : 2.5 })),
-            ...(cisSats || []).map(s => ({ ...s, _c: '#FF8C00', _r: s.category === 'military_isr' ? 4 : s.category === 'sda_asat' ? 3.5 : 2.5 })),
-            ...(nkorSats || []).map(s => ({ ...s, _c: '#C040FF', _r: 5 })),
-            ...(iranSats || []).map(s => ({ ...s, _c: '#FFD700', _r: 5 })),
-        ];
+        var allAdv = [];
+        (prcSats || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _c: '#FF2020', _r: s.category === 'military_isr' ? 4 : s.category === 'sda_asat' ? 3.5 : 2.5 })); });
+        (cisSats || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _c: '#FF8C00', _r: s.category === 'military_isr' ? 4 : s.category === 'sda_asat' ? 3.5 : 2.5 })); });
+        (nkorSats || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _c: '#C040FF', _r: 5 })); });
+        (iranSats || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _c: '#FFD700', _r: 5 })); });
 
-        allAdv.forEach(s => {
+        allAdv.forEach(function(s) {
             if (!s.lat || !s.lng) return;
-            const isISR = s.category === 'military_isr';
-            const isASAT = s.category === 'sda_asat';
-            const m = L.circleMarker([s.lat, s.lng], {
+            var isISR = s.category === 'military_isr';
+            var isASAT = s.category === 'sda_asat';
+            var m = L.circleMarker([s.lat, s.lng], {
                 radius: s._r,
                 fillColor: s._c,
                 fillOpacity: isISR ? 0.85 : isASAT ? 0.75 : 0.5,
@@ -563,92 +644,93 @@ Pages.cmd = async function (el) {
                 opacity: isISR ? 0.3 : 0.2,
                 className: isISR ? 'isr-pulse-marker' : '',
             }).bindPopup(satPopup(s.name, s._c, [
-                `NORAD: ${s.norad_id} | ${s.country}`,
-                `MISSION: <span style="color:${isISR ? 'var(--red)' : isASAT ? 'var(--cis)' : 'var(--text)'}">${(s.category || '').replace(/_/g, ' ').toUpperCase()}</span>`,
-                `ALT: ${Math.round(s.alt_km || 0)} KM | INC: ${s.inclination?.toFixed(1) || '?'}&deg;`,
-                `REGIME: ${s.regime || '?'}`,
+                'NORAD: ' + s.norad_id + ' | ' + s.country,
+                'MISSION: <span style="color:' + (isISR ? 'var(--red)' : isASAT ? 'var(--cis)' : 'var(--text)') + '">' + (s.category || '').replace(/_/g, ' ').toUpperCase() + '</span>',
+                'ALT: ' + Math.round(s.alt_km || 0) + ' KM | INC: ' + (s.inclination ? s.inclination.toFixed(1) : '?') + '&deg;',
+                'REGIME: ' + (s.regime || '?'),
             ]), { className: 'sat-popup', closeButton: false }).addTo(satMap);
             satMarkers.push(m);
         });
 
         // FVEY sats (dim blue)
-        (fveySats || []).forEach(s => {
+        (fveySats || []).forEach(function(s) {
             if (!s.lat || !s.lng) return;
-            const m = L.circleMarker([s.lat, s.lng], {
-                radius: s.norad_id === 25544 ? 6 : 1.5,
-                fillColor: '#2080FF', fillOpacity: s.norad_id === 25544 ? 0.9 : 0.12,
-                color: '#2080FF', weight: s.norad_id === 25544 ? 2 : 0,
+            var isISS = s.norad_id === 25544;
+            var m = L.circleMarker([s.lat, s.lng], {
+                radius: isISS ? 6 : 1.5,
+                fillColor: '#2080FF', fillOpacity: isISS ? 0.9 : 0.12,
+                color: '#2080FF', weight: isISS ? 2 : 0,
             }).addTo(satMap);
             satMarkers.push(m);
         });
 
-        document.getElementById('ov-map-ts').textContent = zulu();
+        var mapTsEl = document.getElementById('ov-map-ts');
+        if (mapTsEl) mapTsEl.textContent = zulu();
     }, 350);
 
     // --- AUTO-REFRESH: Satellites every 30s ---
-    registerInterval(async () => {
+    registerInterval(async function() {
         if (!satMap) return;
-        const [prcR, cisR, nkorR, iranR] = await Promise.all([
+        var refreshResults = await Promise.all([
             api('/api/adversary/satellites?country=PRC'),
             api('/api/adversary/satellites?country=CIS'),
             api('/api/adversary/satellites?country=NKOR'),
             api('/api/adversary/satellites?country=IRAN'),
         ]);
-        satMarkers.forEach(m => satMap.removeLayer(m));
+        satMarkers.forEach(function(m) { satMap.removeLayer(m); });
         satMarkers = [];
-        const refresh = [
-            ...(prcR || []).map(s => ({ ...s, _c: '#FF2020', _r: s.category === 'military_isr' ? 4 : 2.5 })),
-            ...(cisR || []).map(s => ({ ...s, _c: '#FF8C00', _r: s.category === 'military_isr' ? 4 : 2.5 })),
-            ...(nkorR || []).map(s => ({ ...s, _c: '#C040FF', _r: 5 })),
-            ...(iranR || []).map(s => ({ ...s, _c: '#FFD700', _r: 5 })),
-        ];
-        refresh.forEach(s => {
+        var refresh = [];
+        (refreshResults[0] || []).forEach(function(s) { refresh.push(Object.assign({}, s, { _c: '#FF2020', _r: s.category === 'military_isr' ? 4 : 2.5 })); });
+        (refreshResults[1] || []).forEach(function(s) { refresh.push(Object.assign({}, s, { _c: '#FF8C00', _r: s.category === 'military_isr' ? 4 : 2.5 })); });
+        (refreshResults[2] || []).forEach(function(s) { refresh.push(Object.assign({}, s, { _c: '#C040FF', _r: 5 })); });
+        (refreshResults[3] || []).forEach(function(s) { refresh.push(Object.assign({}, s, { _c: '#FFD700', _r: 5 })); });
+        refresh.forEach(function(s) {
             if (!s.lat || !s.lng) return;
-            const m = L.circleMarker([s.lat, s.lng], {
+            var m = L.circleMarker([s.lat, s.lng], {
                 radius: s._r, fillColor: s._c, fillOpacity: 0.6,
                 color: s._c, weight: 0,
             }).addTo(satMap);
             satMarkers.push(m);
         });
-        const tsEl = document.getElementById('ov-map-ts');
+        var tsEl = document.getElementById('ov-map-ts');
         if (tsEl) tsEl.textContent = zulu();
     }, 30000);
 
     // --- AUTO-REFRESH: SITREP every 60s ---
-    registerInterval(async () => {
-        const freshSitrep = await api('/api/intel/sitrep');
+    registerInterval(async function() {
+        var freshSitrep = await api('/api/intel/sitrep');
         renderSitrep(freshSitrep);
     }, 60000);
 
     // --- AUTO-REFRESH: Proximity every 120s ---
-    registerInterval(async () => {
-        const freshProx = await api('/api/intel/proximity');
+    registerInterval(async function() {
+        var freshProx = await api('/api/intel/proximity');
         renderProximity(freshProx);
     }, 120000);
 
     // --- AUTO-REFRESH: Weather every 60s ---
-    registerInterval(async () => {
-        const w = await api('/api/weather');
+    registerInterval(async function() {
+        var w = await api('/api/weather');
         if (!w) return;
         if (w.kp_current != null) {
-            const kpEl = document.getElementById('ov-kp');
-            if (kpEl) {
-                kpEl.textContent = w.kp_current.toFixed(1);
-                kpEl.style.color = w.kp_current < 4 ? 'var(--green)' : w.kp_current < 6 ? '#FFD700' : 'var(--red)';
+            var kpRefEl = document.getElementById('ov-kp');
+            if (kpRefEl) {
+                kpRefEl.textContent = w.kp_current.toFixed(1);
+                kpRefEl.style.color = w.kp_current < 4 ? 'var(--green)' : w.kp_current < 6 ? '#FFD700' : 'var(--red)';
             }
         }
         if (w.solar_wind_speed != null) {
-            const wEl = document.getElementById('ov-wind');
+            var wEl = document.getElementById('ov-wind');
             if (wEl) wEl.textContent = Math.round(w.solar_wind_speed) + ' KM/S';
         }
         if (w.kp_history && typeof updateKpChart === 'function') updateKpChart(w.kp_history);
     }, 60000);
 
     // --- AUTO-REFRESH: Launches every 120s ---
-    registerInterval(async () => {
-        const freshLaunches = await api('/api/launches');
+    registerInterval(async function() {
+        var freshLaunches = await api('/api/launches');
         if (freshLaunches) {
-            advLaunches = freshLaunches.filter(l => isAdvLaunch(l));
+            advLaunches = freshLaunches.filter(function(l) { return isAdvLaunch(l); });
         }
     }, 120000);
 };
@@ -661,7 +743,7 @@ Pages.cmd = async function (el) {
 Pages.adversary = async function (el) {
     el.innerHTML = '<div class="loading">LOADING ADVERSARY INTELLIGENCE</div>';
 
-    const [stats, prc, cis, nkor, iran, threatPrc, threatCis, threatNkor, threatIran] = await Promise.all([
+    var results = await Promise.all([
         api('/api/adversary/stats'),
         api('/api/adversary/satellites?country=PRC'),
         api('/api/adversary/satellites?country=CIS'),
@@ -673,159 +755,208 @@ Pages.adversary = async function (el) {
         api('/api/threat/adversary/IRAN'),
     ]);
 
-    const countries = [
-        { code: 'PRC', name: 'CHINA', sats: prc, threat: threatPrc, color: '#FF2020', stats: stats?.PRC },
-        { code: 'CIS', name: 'RUSSIA', sats: cis, threat: threatCis, color: '#FF8C00', stats: stats?.CIS },
-        { code: 'NKOR', name: 'DPRK', sats: nkor, threat: threatNkor, color: '#C040FF', stats: stats?.NKOR },
-        { code: 'IRAN', name: 'IRAN', sats: iran, threat: threatIran, color: '#FFD700', stats: stats?.IRAN },
+    var advStatsData = results[0];
+    var countries = [
+        { code: 'PRC', name: 'CHINA', sats: results[1], threat: results[5], color: '#FF2020', stats: advStatsData ? advStatsData.PRC : null },
+        { code: 'CIS', name: 'RUSSIA', sats: results[2], threat: results[6], color: '#FF8C00', stats: advStatsData ? advStatsData.CIS : null },
+        { code: 'NKOR', name: 'DPRK', sats: results[3], threat: results[7], color: '#C040FF', stats: advStatsData ? advStatsData.NKOR : null },
+        { code: 'IRAN', name: 'IRAN', sats: results[4], threat: results[8], color: '#FFD700', stats: advStatsData ? advStatsData.IRAN : null },
     ];
 
-    const totalAll = countries.reduce((a, c) => a + (c.stats?.total || c.sats?.length || 0), 0);
-    const totalISR = countries.reduce((a, c) => a + (c.stats?.military_isr || 0), 0);
+    var totalAll = 0;
+    var totalISR = 0;
+    countries.forEach(function(c) {
+        totalAll += (c.stats ? c.stats.total : 0) || (c.sats ? c.sats.length : 0);
+        totalISR += (c.stats ? c.stats.military_isr : 0) || 0;
+    });
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                ${countries.map(c => `
-                    <div class="tb-cell" style="border-left:2px solid ${c.color}">
-                        <div class="tb-icon" style="color:${c.color}">&#9760;</div>
-                        <div><div class="tb-val" style="color:${c.color}">${c.stats?.total || (c.sats?.length || 0)}</div><div class="tb-lbl">${c.name}</div></div>
-                    </div>
-                `).join('')}
-                <div class="tb-cell hostile">
-                    <div class="tb-icon">&#9673;</div>
-                    <div><div class="tb-val">${totalISR}</div><div class="tb-lbl">TOTAL ISR</div></div>
-                </div>
-                <div class="tb-cell info">
-                    <div class="tb-icon">&#9678;</div>
-                    <div><div class="tb-val">${totalAll}</div><div class="tb-lbl">TOTAL HOSTILE</div></div>
-                </div>
-            </div>
-            <div class="country-tabs" id="adv-tabs">
-                ${countries.map((c, i) => `<div class="country-tab${i === 0 ? ' active' : ''}" data-country="${c.code}" style="${i === 0 ? 'color:' + c.color : ''}">${c.name} <span style="font-size:9px;opacity:0.5">${c.stats?.total || c.sats?.length || 0}</span></div>`).join('')}
-            </div>
-            <div id="adv-detail"></div>
-        </div>
-    `;
+    var tabsHtml = '';
+    countries.forEach(function(c, i) {
+        var cnt = (c.stats ? c.stats.total : 0) || (c.sats ? c.sats.length : 0);
+        tabsHtml += '<div class="country-tab' + (i === 0 ? ' active' : '') + '" data-country="' + c.code + '"' +
+            (i === 0 ? ' style="color:' + c.color + '"' : '') + '>' +
+            c.name + ' <span style="font-size:9px;opacity:0.5">' + cnt + '</span></div>';
+    });
 
-    let advMiniMap = null;
+    var barHtml = '';
+    countries.forEach(function(c) {
+        var cnt = (c.stats ? c.stats.total : 0) || (c.sats ? c.sats.length : 0);
+        barHtml += '<div class="tb-cell" style="border-left:2px solid ' + c.color + '">' +
+            '<div class="tb-icon" style="color:' + c.color + '">&#9760;</div>' +
+            '<div><div class="tb-val" style="color:' + c.color + '">' + cnt + '</div><div class="tb-lbl">' + c.name + '</div></div>' +
+            '</div>';
+    });
+
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' + barHtml +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9673;</div><div><div class="tb-val">' + totalISR + '</div><div class="tb-lbl">TOTAL ISR</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + totalAll + '</div><div class="tb-lbl">TOTAL HOSTILE</div></div></div>' +
+        '</div>' +
+        '<div class="country-tabs" id="adv-tabs">' + tabsHtml + '</div>' +
+        '<div id="adv-detail"></div>' +
+        '</div>';
+
+    var advMiniMap = null;
 
     function renderCountry(code) {
-        const c = countries.find(x => x.code === code);
+        var c = null;
+        for (var i = 0; i < countries.length; i++) {
+            if (countries[i].code === code) { c = countries[i]; break; }
+        }
         if (!c) return;
-        const sats = c.sats || [];
-        const t = c.threat || {};
-        const cats = {};
-        const regimes = {};
-        sats.forEach(s => {
+        var sats = c.sats || [];
+        var t = c.threat || {};
+        var cats = {};
+        var regimes = {};
+        sats.forEach(function(s) {
             cats[s.category] = (cats[s.category] || 0) + 1;
             if (s.regime) regimes[s.regime] = (regimes[s.regime] || 0) + 1;
         });
 
-        el.querySelectorAll('.country-tab').forEach(tab => {
-            const tc = countries.find(x => x.code === tab.dataset.country);
+        el.querySelectorAll('.country-tab').forEach(function(tab) {
+            var tc = null;
+            for (var j = 0; j < countries.length; j++) {
+                if (countries[j].code === tab.dataset.country) { tc = countries[j]; break; }
+            }
             tab.style.color = tab.classList.contains('active') ? tc.color : '';
         });
 
         if (advMiniMap) { try { advMiniMap.remove(); } catch (e) { } advMiniMap = null; }
 
-        document.getElementById('adv-detail').innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:2px">
-                <div class="panel">
-                    <div class="panel-head"><h3>STRATEGIC ASSESSMENT</h3><span class="ph-meta">${badge((t.overall_threat || 'high').toLowerCase())} THREAT</span></div>
-                    <div class="panel-body" style="max-height:380px">
-                        ${t.trend ? `<div class="intel-summary"><strong>TREND:</strong> <span style="color:var(--red)">${t.trend}</span></div>` : ''}
-                        <div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:10px">${t.assessment || t.summary || ''}</div>
-                        ${t.doctrine ? `<div class="intel-field"><span class="intel-label">DOCTRINE</span>${t.doctrine}</div>` : ''}
-                        ${t.strategic_context ? `<div class="intel-field"><span class="intel-label">STRATEGIC CONTEXT</span>${t.strategic_context}</div>` : ''}
-                        ${t.key_capabilities?.length ? `
-                            <div class="intel-field"><span class="intel-label">KEY CAPABILITIES</span>
-                                <ul style="margin:3px 0 0 14px;color:var(--text)">${t.key_capabilities.map(k => `<li style="margin-bottom:3px;font-size:10px;line-height:1.4">${k}</li>`).join('')}</ul>
-                            </div>
-                        ` : ''}
-                        ${t.intelligence_gaps?.length ? `
-                            <div class="intel-field"><span class="intel-label" style="color:var(--cis)">INTELLIGENCE GAPS</span>
-                                <ul style="margin:3px 0 0 14px;color:var(--text)">${t.intelligence_gaps.map(g => `<li style="margin-bottom:3px;font-size:10px;line-height:1.4;color:var(--cis)">${g}</li>`).join('')}</ul>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>${c.name} ORBITAL POSITIONS</h3><span class="ph-meta">${sats.length} ACTIVE</span></div>
-                    <div class="panel-body" style="padding:0"><div id="adv-mini-map" class="adv-mini-map"></div></div>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:2px">
-                <div class="panel">
-                    <div class="panel-head"><h3>MISSION BREAKDOWN</h3><span class="ph-meta">${Object.keys(cats).length} CATEGORIES</span></div>
-                    <div class="panel-body">
-                        <div style="font-size:28px;color:${c.color};margin-bottom:8px">${sats.length} <span style="font-size:10px;color:var(--text-dim)">ACTIVE SATELLITES</span></div>
-                        ${Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([cat, count]) => {
-                            const pct = Math.round(count / sats.length * 100);
-                            const isMil = cat === 'military_isr' || cat === 'sda_asat';
-                            return `
-                            <div class="cat-breakdown">
-                                <span class="cat-label" style="${isMil ? 'color:var(--red)' : ''}">${cat.replace(/_/g, ' ')}</span>
-                                <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%;background:${c.color};opacity:${isMil ? 0.9 : 0.6}"></div></div>
-                                <span class="cat-count" style="color:${c.color}">${count}</span>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>ORBITAL REGIME DISTRIBUTION</h3></div>
-                    <div class="panel-body">
-                        ${Object.entries(regimes).sort((a, b) => b[1] - a[1]).map(([regime, count]) => {
-                            const pct = Math.round(count / sats.length * 100);
-                            return `
-                            <div class="cat-breakdown">
-                                <span class="cat-label">${regime}</span>
-                                <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%;background:${c.color};opacity:0.5"></div></div>
-                                <span class="cat-count">${count}</span>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            </div>
-            <div class="panel">
-                <div class="panel-head"><h3>${c.name} SATELLITE CATALOG</h3><span class="ph-meta">${sats.length} OBJECTS</span></div>
-                <div class="panel-body" style="max-height:400px">
-                    <table class="data-table"><thead><tr>
-                        <th>DESIGNATION</th><th>NORAD</th><th>MISSION</th><th>REGIME</th><th>ALT KM</th><th>INC</th>
-                    </tr></thead><tbody>
-                    ${sats.slice(0, 200).map(s => `<tr>
-                        <td style="color:${c.color}">${s.name || '?'}</td>
-                        <td>${s.norad_id || '?'}</td>
-                        <td>${badge(s.category === 'military_isr' ? 'critical' : s.category === 'sda_asat' ? 'high' : 'medium')} ${(s.category || '').replace(/_/g, ' ')}</td>
-                        <td>${s.regime || '?'}</td>
-                        <td>${s.alt_km ? Math.round(s.alt_km) : '?'}</td>
-                        <td>${s.inclination ? s.inclination.toFixed(1) + '\u00B0' : '?'}</td>
-                    </tr>`).join('')}
-                    </tbody></table>
-                </div>
-            </div>
-        `;
+        // Key threat line
+        var keyThreat = t.trend || t.key_threat || '';
+        var threatLevel = (t.overall_threat || 'high').toLowerCase();
 
-        // Initialize mini map
-        setTimeout(() => {
-            const mapEl = document.getElementById('adv-mini-map');
+        // Build mission breakdown
+        var catEntries = Object.entries(cats).sort(function(a, b) { return b[1] - a[1]; });
+        var catHtml = '';
+        catEntries.forEach(function(entry) {
+            var cat = entry[0];
+            var count = entry[1];
+            var pct = Math.round(count / sats.length * 100);
+            var isMil = cat === 'military_isr' || cat === 'sda_asat';
+            catHtml += '<div class="cat-breakdown">' +
+                '<span class="cat-label" style="' + (isMil ? 'color:var(--red)' : '') + '">' + cat.replace(/_/g, ' ') + '</span>' +
+                '<div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%;background:' + c.color + ';opacity:' + (isMil ? 0.9 : 0.6) + '"></div></div>' +
+                '<span class="cat-count" style="color:' + c.color + '">' + count + '</span>' +
+                '</div>';
+        });
+
+        // Build regime breakdown
+        var regEntries = Object.entries(regimes).sort(function(a, b) { return b[1] - a[1]; });
+        var regHtml = '';
+        regEntries.forEach(function(entry) {
+            var regime = entry[0];
+            var count = entry[1];
+            var pct = Math.round(count / sats.length * 100);
+            regHtml += '<div class="cat-breakdown">' +
+                '<span class="cat-label">' + regime + '</span>' +
+                '<div class="cat-bar-wrap"><div class="cat-bar" style="width:' + pct + '%;background:' + c.color + ';opacity:0.5"></div></div>' +
+                '<span class="cat-count">' + count + '</span>' +
+                '</div>';
+        });
+
+        // Build capabilities list
+        var capsHtml = '';
+        if (t.key_capabilities && t.key_capabilities.length) {
+            capsHtml = '<div class="intel-field"><span class="intel-label">KEY CAPABILITIES</span><ul style="margin:3px 0 0 14px;color:var(--text)">';
+            t.key_capabilities.forEach(function(k) {
+                capsHtml += '<li style="margin-bottom:3px;font-size:10px;line-height:1.4">' + k + '</li>';
+            });
+            capsHtml += '</ul></div>';
+        }
+
+        // Build intel gaps
+        var gapsHtml = '';
+        if (t.intelligence_gaps && t.intelligence_gaps.length) {
+            gapsHtml = '<div class="intel-field intel-gap-field"><span class="intel-label" style="color:var(--cis)">&#9888; INTELLIGENCE GAPS</span><ul style="margin:3px 0 0 14px">';
+            t.intelligence_gaps.forEach(function(g) {
+                gapsHtml += '<li style="margin-bottom:3px;font-size:10px;line-height:1.4;color:var(--cis)">' + g + '</li>';
+            });
+            gapsHtml += '</ul></div>';
+        }
+
+        // Build satellite table rows
+        var satRowsHtml = '';
+        sats.slice(0, 200).forEach(function(s) {
+            var catBadge = s.category === 'military_isr' ? 'critical' : s.category === 'sda_asat' ? 'high' : 'medium';
+            satRowsHtml += '<tr>' +
+                '<td style="color:' + c.color + '">' + (s.name || '?') + '</td>' +
+                '<td>' + (s.norad_id || '?') + '</td>' +
+                '<td>' + badge(catBadge) + ' ' + (s.category || '').replace(/_/g, ' ') + '</td>' +
+                '<td>' + (s.regime || '?') + '</td>' +
+                '<td>' + (s.alt_km ? Math.round(s.alt_km) : '?') + '</td>' +
+                '<td>' + (s.inclination ? s.inclination.toFixed(1) + '\u00B0' : '?') + '</td>' +
+                '</tr>';
+        });
+
+        document.getElementById('adv-detail').innerHTML =
+            // Key threat banner
+            (keyThreat ? '<div class="key-threat-banner" style="border-left-color:' + c.color + '">' +
+                '<span class="intel-label">KEY THREAT ASSESSMENT</span> ' +
+                '<span style="color:var(--red);font-size:11px">' + keyThreat + '</span> ' +
+                badge(threatLevel) +
+                '</div>' : '') +
+
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:2px">' +
+                '<div class="panel">' +
+                    '<div class="panel-head"><h3>STRATEGIC ASSESSMENT</h3><span class="ph-meta">' + badge(threatLevel) + ' THREAT</span></div>' +
+                    '<div class="panel-body" style="max-height:380px">' +
+                        (t.trend ? '<div class="intel-summary"><strong>TREND:</strong> <span style="color:var(--red)">' + t.trend + '</span></div>' : '') +
+                        '<div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:10px">' + (t.assessment || t.summary || '') + '</div>' +
+                        (t.doctrine ? '<div class="intel-field doctrine-field"><span class="intel-label">DOCTRINE</span><div style="font-size:10px;line-height:1.5;color:var(--text)">' + t.doctrine + '</div></div>' : '') +
+                        (t.strategic_context ? '<div class="intel-field doctrine-field"><span class="intel-label">STRATEGIC CONTEXT</span><div style="font-size:10px;line-height:1.5;color:var(--text)">' + t.strategic_context + '</div></div>' : '') +
+                        capsHtml +
+                        gapsHtml +
+                    '</div>' +
+                '</div>' +
+                '<div class="panel">' +
+                    '<div class="panel-head"><h3>' + c.name + ' ORBITAL POSITIONS</h3><span class="ph-meta">' + sats.length + ' ACTIVE</span></div>' +
+                    '<div class="panel-body" style="padding:0"><div id="adv-mini-map" style="height:350px;min-height:350px;background:#000"></div></div>' +
+                '</div>' +
+            '</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:2px">' +
+                '<div class="panel">' +
+                    '<div class="panel-head"><h3>MISSION BREAKDOWN</h3><span class="ph-meta">' + Object.keys(cats).length + ' CATEGORIES</span></div>' +
+                    '<div class="panel-body">' +
+                        '<div style="font-size:28px;color:' + c.color + ';margin-bottom:8px">' + sats.length + ' <span style="font-size:10px;color:var(--text-dim)">ACTIVE SATELLITES</span></div>' +
+                        catHtml +
+                    '</div>' +
+                '</div>' +
+                '<div class="panel">' +
+                    '<div class="panel-head"><h3>ORBITAL REGIME DISTRIBUTION</h3></div>' +
+                    '<div class="panel-body">' + regHtml + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>' + c.name + ' SATELLITE CATALOG</h3><span class="ph-meta">' + sats.length + ' OBJECTS</span></div>' +
+                '<div class="panel-body" style="max-height:400px">' +
+                    '<table class="data-table"><thead><tr>' +
+                        '<th>DESIGNATION</th><th>NORAD</th><th>MISSION</th><th>REGIME</th><th>ALT KM</th><th>INC</th>' +
+                    '</tr></thead><tbody>' + satRowsHtml + '</tbody></table>' +
+                '</div>' +
+            '</div>';
+
+        // Initialize mini map — larger and more prominent
+        setTimeout(function() {
+            var mapEl = document.getElementById('adv-mini-map');
             if (!mapEl) return;
-            mapEl.style.height = '280px';
-            const centerLng = code === 'PRC' ? 105 : code === 'CIS' ? 60 : code === 'NKOR' ? 127 : 52;
+            mapEl.style.height = '350px';
+            var centerLng = code === 'PRC' ? 105 : code === 'CIS' ? 60 : code === 'NKOR' ? 127 : 52;
             advMiniMap = makeMap('adv-mini-map', [30, centerLng], 2);
             if (advMiniMap) {
                 storeMap(advMiniMap);
-                sats.forEach(s => {
+                sats.forEach(function(s) {
                     if (!s.lat || !s.lng) return;
-                    const isISR = s.category === 'military_isr';
-                    const isASAT = s.category === 'sda_asat';
+                    var isISR = s.category === 'military_isr';
+                    var isASAT = s.category === 'sda_asat';
                     L.circleMarker([s.lat, s.lng], {
                         radius: isISR ? 4 : isASAT ? 3.5 : 2,
                         fillColor: c.color, fillOpacity: isISR ? 0.9 : 0.5,
                         color: isISR ? '#fff' : c.color, weight: isISR ? 1 : 0,
                         className: isISR ? 'isr-pulse-marker' : '',
                     }).bindPopup(satPopup(s.name, c.color, [
-                        `${(s.category || '').replace(/_/g, ' ')} | ${Math.round(s.alt_km || 0)} KM`,
+                        (s.category || '').replace(/_/g, ' ') + ' | ' + Math.round(s.alt_km || 0) + ' KM',
                     ]), { className: 'sat-popup', closeButton: false }).addTo(advMiniMap);
                 });
             }
@@ -833,9 +964,9 @@ Pages.adversary = async function (el) {
     }
 
     renderCountry('PRC');
-    el.querySelectorAll('.country-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            el.querySelectorAll('.country-tab').forEach(t => t.classList.remove('active'));
+    el.querySelectorAll('.country-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            el.querySelectorAll('.country-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             renderCountry(tab.dataset.country);
         });
@@ -850,7 +981,7 @@ Pages.adversary = async function (el) {
 Pages.orbital = async function (el) {
     el.innerHTML = '<div class="loading">MAPPING ORBITAL THREATS</div>';
 
-    const [prc, cis, nkor, iran, advStats] = await Promise.all([
+    var results = await Promise.all([
         api('/api/adversary/satellites?country=PRC'),
         api('/api/adversary/satellites?country=CIS'),
         api('/api/adversary/satellites?country=NKOR'),
@@ -858,139 +989,120 @@ Pages.orbital = async function (el) {
         api('/api/adversary/stats'),
     ]);
 
-    const allAdv = [
-        ...(prc || []).map(s => ({ ...s, _nation: 'PRC' })),
-        ...(cis || []).map(s => ({ ...s, _nation: 'CIS' })),
-        ...(nkor || []).map(s => ({ ...s, _nation: 'NKOR' })),
-        ...(iran || []).map(s => ({ ...s, _nation: 'IRAN' })),
-    ];
+    var allAdv = [];
+    (results[0] || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _nation: 'PRC' })); });
+    (results[1] || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _nation: 'CIS' })); });
+    (results[2] || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _nation: 'NKOR' })); });
+    (results[3] || []).forEach(function(s) { allAdv.push(Object.assign({}, s, { _nation: 'IRAN' })); });
 
-    const milISR = allAdv.filter(s => s.category === 'military_isr');
-    const sda = allAdv.filter(s => s.category === 'sda_asat');
-    const nav = allAdv.filter(s => s.category === 'navigation');
-    const comms = allAdv.filter(s => s.category === 'comms');
-    const other = allAdv.filter(s => !['military_isr', 'sda_asat', 'navigation', 'comms'].includes(s.category));
+    var milISR = allAdv.filter(function(s) { return s.category === 'military_isr'; });
+    var sda = allAdv.filter(function(s) { return s.category === 'sda_asat'; });
+    var nav = allAdv.filter(function(s) { return s.category === 'navigation'; });
+    var comms = allAdv.filter(function(s) { return s.category === 'comms'; });
+    var other = allAdv.filter(function(s) { return !['military_isr', 'sda_asat', 'navigation', 'comms'].includes(s.category); });
 
     // Regime counts
-    const regimes = {};
-    allAdv.forEach(s => { if (s.regime) regimes[s.regime] = (regimes[s.regime] || 0) + 1; });
-    const regimeSorted = Object.entries(regimes).sort((a, b) => b[1] - a[1]);
+    var regimes = {};
+    allAdv.forEach(function(s) { if (s.regime) regimes[s.regime] = (regimes[s.regime] || 0) + 1; });
+    var regimeSorted = Object.entries(regimes).sort(function(a, b) { return b[1] - a[1]; });
 
-    const mapH = Math.max(450, window.innerHeight * 0.45);
+    var mapH = Math.max(450, window.innerHeight * 0.45);
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">${allAdv.length}</div><div class="tb-lbl">TOTAL HOSTILE</div></div></div>
-                <div class="tb-cell hostile"><div class="tb-icon">&#9673;</div><div><div class="tb-val">${milISR.length}</div><div class="tb-lbl">ISR / RECON</div></div></div>
-                <div class="tb-cell alert"><div class="tb-icon">&#9888;</div><div><div class="tb-val">${sda.length}</div><div class="tb-lbl">SDA / ASAT</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${nav.length}</div><div class="tb-lbl">PNT / NAV</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9656;</div><div><div class="tb-val">${comms.length}</div><div class="tb-lbl">COMMS</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9670;</div><div><div class="tb-val">${other.length}</div><div class="tb-lbl">OTHER</div></div></div>
-            </div>
+    // Build regime strip
+    var regimeStripHtml = '';
+    regimeSorted.slice(0, 5).forEach(function(entry) {
+        regimeStripHtml += '<div class="regime-card">' +
+            '<div class="regime-card-val">' + entry[1] + '</div>' +
+            '<div class="regime-card-label">' + entry[0] + '</div>' +
+            '</div>';
+    });
 
-            <div class="regime-strip">
-                ${regimeSorted.slice(0, 5).map(([regime, count]) => `
-                    <div class="regime-card">
-                        <div class="regime-card-val">${count}</div>
-                        <div class="regime-card-label">${regime}</div>
-                    </div>
-                `).join('')}
-            </div>
+    // Build ISR table rows with aggressive coloring
+    function buildOrbitalRows(arr, maxCount) {
+        var html = '';
+        arr.slice(0, maxCount || 100).forEach(function(s) {
+            var isISR = s.category === 'military_isr';
+            var rowStyle = isISR ? ' style="background:rgba(255,32,32,0.04)"' : '';
+            html += '<tr' + rowStyle + '>' +
+                '<td style="color:' + countryColor(s._nation) + '">' + s.name + '</td>' +
+                '<td>' + countryBadge(s._nation) + '</td>' +
+                '<td>' + (s.alt_km ? Math.round(s.alt_km) + ' KM' : '?') + '</td>' +
+                '<td>' + (s.inclination ? s.inclination.toFixed(1) + '\u00B0' : '?') + '</td>' +
+                '<td>' + (s.regime || '?') + '</td>' +
+                '</tr>';
+        });
+        return html;
+    }
 
-            <div class="panel mb-2">
-                <div class="panel-head"><h3>ADVERSARY ORBITAL ASSETS // GLOBAL VIEW</h3><span class="ph-meta">${zulu()} | ${allAdv.length} OBJECTS</span></div>
-                <div class="panel-body" style="padding:0"><div id="orbital-map" class="map-container" style="height:${mapH}px;min-height:${mapH}px"></div></div>
-            </div>
+    function buildSimpleRows(arr, maxCount) {
+        var html = '';
+        arr.slice(0, maxCount || 60).forEach(function(s) {
+            html += '<tr>' +
+                '<td style="color:' + countryColor(s._nation) + '">' + s.name + '</td>' +
+                '<td>' + countryBadge(s._nation) + '</td>' +
+                '<td>' + (s.alt_km ? Math.round(s.alt_km) + ' KM' : '?') + '</td>' +
+                '<td>' + (s.regime || '?') + '</td>' +
+                '</tr>';
+        });
+        return html;
+    }
 
-            <div class="grid-2 mb-2">
-                <div class="panel">
-                    <div class="panel-head"><h3>HOSTILE ISR / RECONNAISSANCE</h3><span class="ph-meta"><span class="badge badge-critical">${milISR.length} TRACKED</span></span></div>
-                    <div class="panel-body" style="max-height:350px">
-                        <table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>INC</th><th>REGIME</th></tr></thead><tbody>
-                        ${milISR.slice(0, 100).map(s => `<tr>
-                            <td style="color:${countryColor(s._nation)}">${s.name}</td>
-                            <td>${countryBadge(s._nation)}</td>
-                            <td>${s.alt_km ? Math.round(s.alt_km) + ' KM' : '?'}</td>
-                            <td>${s.inclination?.toFixed(1) || '?'}\u00B0</td>
-                            <td>${s.regime || '?'}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>SDA / ASAT-CAPABLE</h3><span class="ph-meta"><span class="badge badge-critical">${sda.length} TRACKED</span></span></div>
-                    <div class="panel-body" style="max-height:350px">
-                        <table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>INC</th><th>REGIME</th></tr></thead><tbody>
-                        ${sda.map(s => `<tr>
-                            <td style="color:${countryColor(s._nation)}">${s.name}</td>
-                            <td>${countryBadge(s._nation)}</td>
-                            <td>${s.alt_km ? Math.round(s.alt_km) + ' KM' : '?'}</td>
-                            <td>${s.inclination?.toFixed(1) || '?'}\u00B0</td>
-                            <td>${s.regime || '?'}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-            </div>
-            <div class="grid-3">
-                <div class="panel">
-                    <div class="panel-head"><h3>NAVIGATION / PNT</h3><span class="ph-meta">${nav.length}</span></div>
-                    <div class="panel-body" style="max-height:250px">
-                        <table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>REGIME</th></tr></thead><tbody>
-                        ${nav.slice(0, 60).map(s => `<tr>
-                            <td style="color:${countryColor(s._nation)}">${s.name}</td>
-                            <td>${countryBadge(s._nation)}</td>
-                            <td>${s.alt_km ? Math.round(s.alt_km) + ' KM' : '?'}</td>
-                            <td>${s.regime || '?'}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>COMMUNICATIONS</h3><span class="ph-meta">${comms.length}</span></div>
-                    <div class="panel-body" style="max-height:250px">
-                        <table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>REGIME</th></tr></thead><tbody>
-                        ${comms.slice(0, 60).map(s => `<tr>
-                            <td style="color:${countryColor(s._nation)}">${s.name}</td>
-                            <td>${countryBadge(s._nation)}</td>
-                            <td>${s.alt_km ? Math.round(s.alt_km) + ' KM' : '?'}</td>
-                            <td>${s.regime || '?'}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>OTHER / UNCAT</h3><span class="ph-meta">${other.length}</span></div>
-                    <div class="panel-body" style="max-height:250px">
-                        <table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>CAT</th><th>ALT</th></tr></thead><tbody>
-                        ${other.slice(0, 60).map(s => `<tr>
-                            <td style="color:${countryColor(s._nation)}">${s.name}</td>
-                            <td>${countryBadge(s._nation)}</td>
-                            <td>${(s.category || '?').replace(/_/g, ' ')}</td>
-                            <td>${s.alt_km ? Math.round(s.alt_km) + ' KM' : '?'}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">' + allAdv.length + '</div><div class="tb-lbl">TOTAL HOSTILE</div></div></div>' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9673;</div><div><div class="tb-val">' + milISR.length + '</div><div class="tb-lbl">ISR / RECON</div></div></div>' +
+            '<div class="tb-cell alert"><div class="tb-icon">&#9888;</div><div><div class="tb-val">' + sda.length + '</div><div class="tb-lbl">SDA / ASAT</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + nav.length + '</div><div class="tb-lbl">PNT / NAV</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9656;</div><div><div class="tb-val">' + comms.length + '</div><div class="tb-lbl">COMMS</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9670;</div><div><div class="tb-val">' + other.length + '</div><div class="tb-lbl">OTHER</div></div></div>' +
+        '</div>' +
+        '<div class="regime-strip">' + regimeStripHtml + '</div>' +
+        '<div class="panel mb-2">' +
+            '<div class="panel-head"><h3>ADVERSARY ORBITAL ASSETS // GLOBAL VIEW</h3><span class="ph-meta">' + zulu() + ' | ' + allAdv.length + ' OBJECTS</span></div>' +
+            '<div class="panel-body" style="padding:0"><div id="orbital-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div>' +
+        '</div>' +
+        '<div class="grid-2 mb-2">' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>HOSTILE ISR / RECONNAISSANCE</h3><span class="ph-meta"><span class="badge badge-critical">' + milISR.length + ' TRACKED</span></span></div>' +
+                '<div class="panel-body" style="max-height:350px">' +
+                    '<table class="data-table isr-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>INC</th><th>REGIME</th></tr></thead><tbody>' +
+                    buildOrbitalRows(milISR, 100) +
+                    '</tbody></table>' +
+                '</div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>SDA / ASAT-CAPABLE</h3><span class="ph-meta"><span class="badge badge-critical">' + sda.length + ' TRACKED</span></span></div>' +
+                '<div class="panel-body" style="max-height:350px">' +
+                    '<table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>INC</th><th>REGIME</th></tr></thead><tbody>' +
+                    buildOrbitalRows(sda) +
+                    '</tbody></table>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="grid-3">' +
+            '<div class="panel"><div class="panel-head"><h3>NAVIGATION / PNT</h3><span class="ph-meta">' + nav.length + '</span></div>' +
+                '<div class="panel-body" style="max-height:250px"><table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>REGIME</th></tr></thead><tbody>' + buildSimpleRows(nav) + '</tbody></table></div></div>' +
+            '<div class="panel"><div class="panel-head"><h3>COMMUNICATIONS</h3><span class="ph-meta">' + comms.length + '</span></div>' +
+                '<div class="panel-body" style="max-height:250px"><table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>REGIME</th></tr></thead><tbody>' + buildSimpleRows(comms) + '</tbody></table></div></div>' +
+            '<div class="panel"><div class="panel-head"><h3>OTHER / UNCAT</h3><span class="ph-meta">' + other.length + '</span></div>' +
+                '<div class="panel-body" style="max-height:250px"><table class="data-table"><thead><tr><th>DESIGNATION</th><th>NATION</th><th>ALT</th><th>REGIME</th></tr></thead><tbody>' + buildSimpleRows(other) + '</tbody></table></div></div>' +
+        '</div>' +
+        '</div>';
 
-    setTimeout(() => {
-        const mapEl = document.getElementById('orbital-map');
+    setTimeout(function() {
+        var mapEl = document.getElementById('orbital-map');
         if (!mapEl) return;
         mapEl.style.height = mapH + 'px';
-        const omap = makeMap('orbital-map', [20, 0], 2);
+        var omap = makeMap('orbital-map', [20, 0], 2);
         if (!omap) return;
         storeMap(omap);
 
-        allAdv.forEach(s => {
+        allAdv.forEach(function(s) {
             if (!s.lat || !s.lng) return;
-            const col = countryColor(s._nation);
-            const isISR = s.category === 'military_isr';
-            const isASAT = s.category === 'sda_asat';
-            const r = isASAT ? 5 : isISR ? 4 : s.category === 'navigation' ? 3 : 2.5;
+            var col = countryColor(s._nation);
+            var isISR = s.category === 'military_isr';
+            var isASAT = s.category === 'sda_asat';
+            var r = isASAT ? 5 : isISR ? 4 : s.category === 'navigation' ? 3 : 2.5;
             L.circleMarker([s.lat, s.lng], {
                 radius: r,
                 fillColor: col,
@@ -1000,7 +1112,7 @@ Pages.orbital = async function (el) {
                 opacity: 0.4,
                 className: isISR ? 'isr-pulse-marker' : '',
             }).bindPopup(satPopup(s.name, col, [
-                `${s._nation} | ${(s.category || '').replace(/_/g, ' ')} | ${Math.round(s.alt_km || 0)} KM | ${s.regime || '?'}`,
+                s._nation + ' | ' + (s.category || '').replace(/_/g, ' ') + ' | ' + Math.round(s.alt_km || 0) + ' KM | ' + (s.regime || '?'),
             ]), { className: 'sat-popup', closeButton: false }).addTo(omap);
         });
     }, 150);
@@ -1013,70 +1125,74 @@ Pages.orbital = async function (el) {
    ================================================================ */
 Pages.launches = async function (el) {
     el.innerHTML = '<div class="loading">LOADING LAUNCH INTELLIGENCE</div>';
-    const data = await api('/api/launches');
+    var data = await api('/api/launches');
     if (!data) { el.innerHTML = '<div class="empty-state">LAUNCH DATA UNAVAILABLE</div>'; return; }
 
-    data.forEach(l => { l._isAdv = isAdvLaunch(l); });
-    const advLaunches = data.filter(l => l._isAdv);
-    const fveyLaunches = data.filter(l => !l._isAdv);
+    data.forEach(function(l) { l._isAdv = isAdvLaunch(l); });
+    var advLaunches = data.filter(function(l) { return l._isAdv; });
+    var fveyLaunches = data.filter(function(l) { return !l._isAdv; });
 
-    // Find next adversary launch for hero countdown
-    const nextAdv = advLaunches.find(l => l.net && new Date(l.net).getTime() > Date.now());
+    var nextAdv = null;
+    for (var i = 0; i < advLaunches.length; i++) {
+        if (advLaunches[i].net && new Date(advLaunches[i].net).getTime() > Date.now()) {
+            nextAdv = advLaunches[i];
+            break;
+        }
+    }
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            ${nextAdv ? `
-            <div class="launch-hero" id="launch-hero">
-                <div>
-                    <div class="launch-hero-label">NEXT ADVERSARY LAUNCH</div>
-                    <div class="launch-hero-name">${nextAdv.name}</div>
-                    <div class="launch-hero-meta">${nextAdv.provider || '?'} | ${nextAdv.rocket || '?'} | ${nextAdv.pad_location || '?'}</div>
-                </div>
-                <div class="launch-hero-countdown" id="hero-countdown">${countdown(nextAdv.net)}</div>
-            </div>
-            ` : ''}
+    var heroHtml = '';
+    if (nextAdv) {
+        heroHtml = '<div class="launch-hero" id="launch-hero">' +
+            '<div>' +
+                '<div class="launch-hero-label">&#9760; NEXT ADVERSARY LAUNCH</div>' +
+                '<div class="launch-hero-name">' + nextAdv.name + '</div>' +
+                '<div class="launch-hero-meta">' + (nextAdv.provider || '?') + ' | ' + (nextAdv.rocket || '?') + ' | ' + (nextAdv.pad_location || '?') + '</div>' +
+            '</div>' +
+            '<div class="launch-hero-countdown" id="hero-countdown">' + countdown(nextAdv.net) + '</div>' +
+        '</div>';
+    }
 
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">${advLaunches.length}</div><div class="tb-lbl">ADVERSARY</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">${fveyLaunches.length}</div><div class="tb-lbl">ALLIED / OTHER</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${data.length}</div><div class="tb-lbl">TOTAL UPCOMING</div></div></div>
-            </div>
-
-            <div class="grid-2">
-                <div class="panel">
-                    <div class="panel-head"><h3>ADVERSARY LAUNCHES</h3><span class="ph-meta"><span class="badge badge-critical">${advLaunches.length} SCHEDULED</span> ${livePulse('1S', 'red')}</span></div>
-                    <div class="panel-body" id="launch-adv" style="max-height:calc(100vh - 280px)"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>ALLIED / OTHER LAUNCHES</h3><span class="ph-meta">${fveyLaunches.length} TOTAL ${livePulse('1S', '')}</span></div>
-                    <div class="panel-body" id="launch-fvey" style="max-height:calc(100vh - 280px)"></div>
-                </div>
-            </div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' + heroHtml +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">' + advLaunches.length + '</div><div class="tb-lbl">ADVERSARY</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + fveyLaunches.length + '</div><div class="tb-lbl">ALLIED / OTHER</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + data.length + '</div><div class="tb-lbl">TOTAL UPCOMING</div></div></div>' +
+        '</div>' +
+        '<div class="grid-2">' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>ADVERSARY LAUNCHES</h3><span class="ph-meta"><span class="badge badge-critical">' + advLaunches.length + ' SCHEDULED</span> ' + livePulse('1S', 'red') + '</span></div>' +
+                '<div class="panel-body" id="launch-adv" style="max-height:calc(100vh - 280px)"></div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>ALLIED / OTHER LAUNCHES</h3><span class="ph-meta">' + fveyLaunches.length + ' TOTAL ' + livePulse('1S', '') + '</span></div>' +
+                '<div class="panel-body" id="launch-fvey" style="max-height:calc(100vh - 280px)"></div>' +
+            '</div>' +
+        '</div>' +
+        '</div>';
 
     function renderLaunchList(container, launches) {
         if (!container) return;
         if (!launches.length) { container.innerHTML = '<div class="empty-state">NONE SCHEDULED</div>'; return; }
-        container.innerHTML = launches.map(l => `
-            <div class="launch-line ${l._isAdv ? 'll-adv' : ''}">
-                <div style="display:flex;align-items:center;justify-content:space-between">
-                    <div class="ll-name">${l._isAdv ? '&#9760; ' : ''}${l.name}</div>
-                    <div class="ll-countdown" style="font-size:13px">${l.net ? countdown(l.net) : 'TBD'}</div>
-                </div>
-                <div class="ll-detail">${l.provider || '?'} | ${l.rocket || '?'} | ${l.pad_location || '?'}</div>
-                ${l.mission_description ? `<div style="font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.3">${(l.mission_description || '').substring(0, 120)}</div>` : ''}
-            </div>
-        `).join('');
+        var html = '';
+        launches.forEach(function(l) {
+            html += '<div class="launch-line ' + (l._isAdv ? 'll-adv' : '') + '">' +
+                '<div style="display:flex;align-items:center;justify-content:space-between">' +
+                '<div class="ll-name">' + (l._isAdv ? '&#9760; ' : '') + l.name + '</div>' +
+                '<div class="ll-countdown" style="font-size:13px">' + (l.net ? countdown(l.net) : 'TBD') + '</div>' +
+                '</div>' +
+                '<div class="ll-detail">' + (l.provider || '?') + ' | ' + (l.rocket || '?') + ' | ' + (l.pad_location || '?') + '</div>' +
+                (l.mission_description ? '<div style="font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.3">' + (l.mission_description || '').substring(0, 120) + '</div>' : '') +
+                '</div>';
+        });
+        container.innerHTML = html;
     }
 
     renderLaunchList(document.getElementById('launch-adv'), advLaunches);
     renderLaunchList(document.getElementById('launch-fvey'), fveyLaunches);
 
-    // Live countdown refresh every second
-    registerInterval(() => {
+    registerInterval(function() {
         if (nextAdv) {
-            const heroEl = document.getElementById('hero-countdown');
+            var heroEl = document.getElementById('hero-countdown');
             if (heroEl) heroEl.textContent = countdown(nextAdv.net);
         }
         renderLaunchList(document.getElementById('launch-adv'), advLaunches);
@@ -1087,135 +1203,127 @@ Pages.launches = async function (el) {
 
 /* ================================================================
    PAGE 5: GROUND STATIONS
-   Map with all ground stations + adversary / FVEY tables
+   Map with custom markers + adversary / FVEY tables
    ================================================================ */
 Pages.ground = async function (el) {
     el.innerHTML = '<div class="loading">MAPPING GROUND INFRASTRUCTURE</div>';
 
-    const [allStations, advStations, fveyStations] = await Promise.all([
+    var results = await Promise.all([
         api('/api/ground-stations'),
         api('/api/ground-stations?scope=adversary'),
         api('/api/ground-stations?scope=fvey'),
     ]);
 
-    const stations = allStations || [];
+    var stations = results[0] || [];
     if (!stations.length) { el.innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
 
-    const adversary = advStations || stations.filter(s => ['PRC', 'CIS', 'NKOR', 'IRAN'].includes(s.country));
-    const fvey = fveyStations || stations.filter(s => ['US', 'UK', 'CA', 'AU', 'NZ'].includes(s.country));
+    var adversary = results[1] || stations.filter(function(s) { return ['PRC', 'CIS', 'NKOR', 'IRAN'].includes(s.country); });
+    var fvey = results[2] || stations.filter(function(s) { return ['US', 'UK', 'CA', 'AU', 'NZ'].includes(s.country); });
 
-    const launchSites = stations.filter(s => (s.type || '').toLowerCase().includes('launch'));
-    const ttcSites = stations.filter(s => (s.type || '').toLowerCase().includes('tt&c') || (s.type || '').toLowerCase().includes('tracking') || (s.type || '').toLowerCase().includes('telemetry'));
-    const radarSites = stations.filter(s => (s.type || '').toLowerCase().includes('radar') || (s.type || '').toLowerCase().includes('sensor'));
+    var launchSites = stations.filter(function(s) { return (s.type || '').toLowerCase().includes('launch'); });
+    var ttcSites = stations.filter(function(s) { var t = (s.type || '').toLowerCase(); return t.includes('tt&c') || t.includes('tracking') || t.includes('telemetry'); });
+    var radarSites = stations.filter(function(s) { var t = (s.type || '').toLowerCase(); return t.includes('radar') || t.includes('sensor'); });
 
-    const mapH = Math.max(450, window.innerHeight * 0.5);
+    var mapH = Math.max(450, window.innerHeight * 0.5);
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9873;</div><div><div class="tb-val">${adversary.length}</div><div class="tb-lbl">ADVERSARY</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">${fvey.length}</div><div class="tb-lbl">FVEY</div></div></div>
-                <div class="tb-cell alert"><div class="tb-icon">&#9650;</div><div><div class="tb-val">${launchSites.length}</div><div class="tb-lbl">LAUNCH</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${ttcSites.length}</div><div class="tb-lbl">TT&C</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9670;</div><div><div class="tb-val">${radarSites.length}</div><div class="tb-lbl">RADAR/SENSOR</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${stations.length}</div><div class="tb-lbl">TOTAL</div></div></div>
-            </div>
-            <div class="panel mb-2">
-                <div class="panel-head">
-                    <h3>GLOBAL GROUND INFRASTRUCTURE</h3>
-                    <span class="ph-meta">${zulu()} | &#9650; LAUNCH &nbsp; &#9632; TT&C &nbsp; &#9679; RADAR &nbsp; &#9733; FVEY</span>
-                </div>
-                <div class="panel-body" style="padding:0"><div id="gs-map" class="map-container" style="height:${mapH}px;min-height:${mapH}px"></div></div>
-            </div>
-            <div class="grid-2">
-                <div class="panel">
-                    <div class="panel-head"><h3>ADVERSARY FACILITIES</h3><span class="ph-meta"><span class="badge badge-critical">${adversary.length}</span></span></div>
-                    <div class="panel-body" style="max-height:350px">
-                        <table class="data-table"><thead><tr><th>FACILITY</th><th>NATION</th><th>TYPE</th><th>DESCRIPTION</th></tr></thead><tbody>
-                        ${adversary.map(s => `<tr>
-                            <td style="color:${countryColor(s.country)}">${s.name}</td>
-                            <td>${countryBadge(s.country)}</td>
-                            <td>${s.type || '?'}</td>
-                            <td style="white-space:normal;max-width:300px;font-size:9px;color:var(--text-dim)">${(s.description || '').substring(0, 100)}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>FVEY FACILITIES</h3><span class="ph-meta"><span class="badge badge-fvey">${fvey.length}</span></span></div>
-                    <div class="panel-body" style="max-height:350px">
-                        <table class="data-table"><thead><tr><th>FACILITY</th><th>NATION</th><th>TYPE</th><th>DESCRIPTION</th></tr></thead><tbody>
-                        ${fvey.map(s => `<tr>
-                            <td style="color:var(--cyan)">${s.name}</td>
-                            <td>${countryBadge(s.country)}</td>
-                            <td>${s.type || '?'}</td>
-                            <td style="white-space:normal;max-width:300px;font-size:9px;color:var(--text-dim)">${(s.description || '').substring(0, 100)}</td>
-                        </tr>`).join('')}
-                        </tbody></table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    // Build adversary table
+    var advTableHtml = '';
+    adversary.forEach(function(s) {
+        advTableHtml += '<tr>' +
+            '<td style="color:' + countryColor(s.country) + '">' + s.name + '</td>' +
+            '<td>' + countryBadge(s.country) + '</td>' +
+            '<td>' + (s.type || '?') + '</td>' +
+            '<td style="white-space:normal;max-width:300px;font-size:9px;color:var(--text-dim)">' + (s.description || '').substring(0, 100) + '</td>' +
+            '</tr>';
+    });
 
-    setTimeout(() => {
-        const mapEl = document.getElementById('gs-map');
+    var fveyTableHtml = '';
+    fvey.forEach(function(s) {
+        fveyTableHtml += '<tr>' +
+            '<td style="color:var(--cyan)">' + s.name + '</td>' +
+            '<td>' + countryBadge(s.country) + '</td>' +
+            '<td>' + (s.type || '?') + '</td>' +
+            '<td style="white-space:normal;max-width:300px;font-size:9px;color:var(--text-dim)">' + (s.description || '').substring(0, 100) + '</td>' +
+            '</tr>';
+    });
+
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9873;</div><div><div class="tb-val">' + adversary.length + '</div><div class="tb-lbl">ADVERSARY</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + fvey.length + '</div><div class="tb-lbl">FVEY</div></div></div>' +
+            '<div class="tb-cell alert"><div class="tb-icon">&#9650;</div><div><div class="tb-val">' + launchSites.length + '</div><div class="tb-lbl">LAUNCH</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9632;</div><div><div class="tb-val">' + ttcSites.length + '</div><div class="tb-lbl">TT&C</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9679;</div><div><div class="tb-val">' + radarSites.length + '</div><div class="tb-lbl">RADAR/SENSOR</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + stations.length + '</div><div class="tb-lbl">TOTAL</div></div></div>' +
+        '</div>' +
+        '<div class="panel mb-2">' +
+            '<div class="panel-head">' +
+                '<h3>GLOBAL GROUND INFRASTRUCTURE</h3>' +
+                '<span class="ph-meta">' + zulu() + '</span>' +
+            '</div>' +
+            '<div class="panel-body" style="padding:0;position:relative">' +
+                '<div id="gs-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div>' +
+                '<div class="gs-legend">' +
+                    '<div class="gs-legend-item"><div class="gs-launch-marker" style="width:10px;height:10px"></div> LAUNCH</div>' +
+                    '<div class="gs-legend-item"><div class="gs-ttc-marker" style="width:8px;height:8px"></div> TT&C</div>' +
+                    '<div class="gs-legend-item"><div class="gs-radar-marker" style="width:7px;height:7px"></div> RADAR</div>' +
+                    '<div class="gs-legend-item"><div class="gs-fvey-marker" style="width:9px;height:9px"></div> FVEY</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="grid-2">' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>ADVERSARY FACILITIES</h3><span class="ph-meta"><span class="badge badge-critical">' + adversary.length + '</span></span></div>' +
+                '<div class="panel-body" style="max-height:350px"><table class="data-table"><thead><tr><th>FACILITY</th><th>NATION</th><th>TYPE</th><th>DESCRIPTION</th></tr></thead><tbody>' + advTableHtml + '</tbody></table></div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>FVEY FACILITIES</h3><span class="ph-meta"><span class="badge badge-fvey">' + fvey.length + '</span></span></div>' +
+                '<div class="panel-body" style="max-height:350px"><table class="data-table"><thead><tr><th>FACILITY</th><th>NATION</th><th>TYPE</th><th>DESCRIPTION</th></tr></thead><tbody>' + fveyTableHtml + '</tbody></table></div>' +
+            '</div>' +
+        '</div></div>';
+
+    setTimeout(function() {
+        var mapEl = document.getElementById('gs-map');
         if (!mapEl) return;
         mapEl.style.height = mapH + 'px';
-        const gmap = makeMap('gs-map', [25, 60], 3);
+        var gmap = makeMap('gs-map', [25, 60], 3);
         if (!gmap) return;
         storeMap(gmap);
 
-        stations.forEach(s => {
+        stations.forEach(function(s) {
             if (!s.lat || !s.lng) return;
-            const isAdv = ['PRC', 'CIS', 'NKOR', 'IRAN'].includes(s.country);
-            const isFvey = ['US', 'UK', 'CA', 'AU', 'NZ'].includes(s.country);
-            const col = countryColor(s.country) || (isAdv ? '#FF2020' : '#2080FF');
-            const type = (s.type || '').toLowerCase();
-            const isLaunch = type.includes('launch');
-            const isTTC = type.includes('tt&c') || type.includes('tracking') || type.includes('telemetry');
+            var isAdv = ['PRC', 'CIS', 'NKOR', 'IRAN'].includes(s.country);
+            var isFvey = ['US', 'UK', 'CA', 'AU', 'NZ'].includes(s.country);
+            var col = countryColor(s.country) || (isAdv ? '#FF2020' : '#2080FF');
+            var type = (s.type || '').toLowerCase();
+            var isLaunch = type.includes('launch');
+            var isTTC = type.includes('tt&c') || type.includes('tracking') || type.includes('telemetry');
 
-            let marker;
+            var marker;
             if (isLaunch && isAdv) {
                 marker = L.marker([s.lat, s.lng], {
-                    icon: L.divIcon({
-                        className: '',
-                        html: '<div class="gs-launch-marker"></div>',
-                        iconSize: [14, 14],
-                        iconAnchor: [7, 7],
-                    })
+                    icon: L.divIcon({ className: '', html: '<div class="gs-launch-marker"></div>', iconSize: [14, 14], iconAnchor: [7, 7] })
                 });
             } else if (isFvey) {
                 marker = L.marker([s.lat, s.lng], {
-                    icon: L.divIcon({
-                        className: '',
-                        html: '<div class="gs-fvey-marker"></div>',
-                        iconSize: [10, 10],
-                        iconAnchor: [5, 5],
-                    })
+                    icon: L.divIcon({ className: '', html: '<div class="gs-fvey-marker"></div>', iconSize: [10, 10], iconAnchor: [5, 5] })
                 });
             } else if (isTTC && isAdv) {
                 marker = L.marker([s.lat, s.lng], {
-                    icon: L.divIcon({
-                        className: '',
-                        html: '<div class="gs-ttc-marker"></div>',
-                        iconSize: [10, 10],
-                        iconAnchor: [5, 5],
-                    })
+                    icon: L.divIcon({ className: '', html: '<div class="gs-ttc-marker"></div>', iconSize: [10, 10], iconAnchor: [5, 5] })
                 });
             } else {
-                const radius = isAdv ? 7 : 5;
+                var radius = isAdv ? 7 : 5;
                 marker = L.circleMarker([s.lat, s.lng], {
-                    radius: radius,
-                    fillColor: col, fillOpacity: isAdv ? 0.6 : 0.35,
+                    radius: radius, fillColor: col, fillOpacity: isAdv ? 0.6 : 0.35,
                     color: col, weight: 1, opacity: isAdv ? 0.6 : 0.3,
                 });
             }
 
             marker.bindPopup(satPopup(s.name, col, [
-                `${s.country} | ${s.type || '?'}`,
-                `<span style="color:var(--text-dim);font-size:9px;line-height:1.4">${s.description || ''}</span>`,
-                `<span style="font-size:8px;color:var(--text-muted)">${s.lat.toFixed(2)}N ${s.lng.toFixed(2)}E</span>`,
+                s.country + ' | ' + (s.type || '?'),
+                '<span style="color:var(--text-dim);font-size:9px;line-height:1.4">' + (s.description || '') + '</span>',
+                '<span style="font-size:8px;color:var(--text-muted)">' + s.lat.toFixed(2) + 'N ' + s.lng.toFixed(2) + 'E</span>',
             ]), { className: 'sat-popup', closeButton: false }).addTo(gmap);
         });
     }, 150);
@@ -1224,118 +1332,122 @@ Pages.ground = async function (el) {
 
 /* ================================================================
    PAGE 6: ASAT / COUNTERSPACE INTELLIGENCE
-   33 systems, country filter tabs, summary bar, 2-column grid
+   33 systems, country filter tabs, summary bars, 2-column grid
    ================================================================ */
 Pages.missile = async function (el) {
     el.innerHTML = '<div class="loading">LOADING COUNTERSPACE INTELLIGENCE</div>';
-    const allSystems = await api('/api/missile-asat');
+    var allSystems = await api('/api/missile-asat');
     if (!allSystems) { el.innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
 
-    const critical = allSystems.filter(s => s.threat_level === 'critical');
-    const high = allSystems.filter(s => s.threat_level === 'high');
-    const medium = allSystems.filter(s => s.threat_level === 'medium');
+    var critical = allSystems.filter(function(s) { return s.threat_level === 'critical'; });
+    var high = allSystems.filter(function(s) { return s.threat_level === 'high'; });
+    var medium = allSystems.filter(function(s) { return s.threat_level === 'medium'; });
 
-    const byCountry = {};
-    allSystems.forEach(s => { const c = s.country || 'Unknown'; byCountry[c] = (byCountry[c] || 0) + 1; });
+    var byCountry = {};
+    allSystems.forEach(function(s) { var c = s.country || 'Unknown'; byCountry[c] = (byCountry[c] || 0) + 1; });
 
-    const byType = {};
-    allSystems.forEach(s => { const t = (s.type || 'unknown').replace(/_/g, ' '); byType[t] = (byType[t] || 0) + 1; });
+    var byType = {};
+    allSystems.forEach(function(s) { var t = (s.type || 'unknown').replace(/_/g, ' '); byType[t] = (byType[t] || 0) + 1; });
 
-    const total = allSystems.length;
-    const countryColors = { 'PRC': '#FF2020', 'Russia': '#FF8C00', 'DPRK': '#C040FF', 'Iran': '#FFD700' };
+    var total = allSystems.length;
+    var cc = { 'PRC': '#FF2020', 'Russia': '#FF8C00', 'DPRK': '#C040FF', 'Iran': '#FFD700' };
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9888;</div><div><div class="tb-val">${critical.length}</div><div class="tb-lbl">CRITICAL</div></div></div>
-                <div class="tb-cell warning"><div class="tb-icon">&#9888;</div><div><div class="tb-val">${high.length}</div><div class="tb-lbl">HIGH</div></div></div>
-                <div class="tb-cell alert"><div class="tb-icon">&#9670;</div><div><div class="tb-val">${medium.length}</div><div class="tb-lbl">MEDIUM</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${total}</div><div class="tb-lbl">TOTAL SYSTEMS</div></div></div>
-            </div>
+    // Build summary bars by nation
+    var nationBarHtml = '';
+    var nationBreakHtml = '';
+    Object.entries(byCountry).forEach(function(entry) {
+        var name = entry[0];
+        var count = entry[1];
+        var pct = (count / total * 100).toFixed(1);
+        var col = cc[name] || '#888';
+        nationBarHtml += '<div class="asat-summary-segment" style="width:' + pct + '%;background:' + col + '"><span class="seg-label">' + name + ' ' + count + '</span></div>';
+    });
+    Object.entries(byCountry).sort(function(a, b) { return b[1] - a[1]; }).forEach(function(entry) {
+        var name = entry[0];
+        var count = entry[1];
+        var col = cc[name] || '#888';
+        nationBreakHtml += '<div class="cat-breakdown"><span class="cat-label" style="color:' + col + '">' + name + '</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + (count / total * 100) + '%;background:' + col + '"></div></div><span class="cat-count">' + count + '</span></div>';
+    });
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:4px">
-                <div class="panel">
-                    <div class="panel-head"><h3>BY NATION</h3></div>
-                    <div class="panel-body">
-                        <div class="asat-summary-bar">
-                            ${Object.entries(byCountry).map(([c, count]) => {
-                                const pct = (count / total * 100).toFixed(1);
-                                const col = countryColors[c] || '#888';
-                                return `<div class="asat-summary-segment" style="width:${pct}%;background:${col}"><span class="seg-label">${c} ${count}</span></div>`;
-                            }).join('')}
-                        </div>
-                        ${Object.entries(byCountry).sort((a, b) => b[1] - a[1]).map(([c, count]) => {
-                            const col = countryColors[c] || '#888';
-                            return `<div class="cat-breakdown"><span class="cat-label" style="color:${col}">${c}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${count / total * 100}%;background:${col}"></div></div><span class="cat-count">${count}</span></div>`;
-                        }).join('')}
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>BY TYPE</h3></div>
-                    <div class="panel-body">
-                        <div class="asat-summary-bar">
-                            ${Object.entries(byType).map(([t, count], i) => {
-                                const pct = (count / total * 100).toFixed(1);
-                                const colors = ['#FF2020', '#FF8C00', '#FFD700', '#C040FF', '#2080FF', '#20FF60', '#00D4FF'];
-                                const col = colors[i % colors.length];
-                                return `<div class="asat-summary-segment" style="width:${pct}%;background:${col}"><span class="seg-label">${t.toUpperCase().substring(0, 12)}</span></div>`;
-                            }).join('')}
-                        </div>
-                        ${Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([t, count], i) => {
-                            const colors = ['#FF2020', '#FF8C00', '#FFD700', '#C040FF', '#2080FF', '#20FF60', '#00D4FF'];
-                            const col = colors[i % colors.length];
-                            return `<div class="cat-breakdown"><span class="cat-label">${t.toUpperCase()}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${count / total * 100}%;background:${col}"></div></div><span class="cat-count">${count}</span></div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            </div>
+    var typeBarHtml = '';
+    var typeBreakHtml = '';
+    var typeColors = ['#FF2020', '#FF8C00', '#FFD700', '#C040FF', '#2080FF', '#20FF60', '#00D4FF'];
+    var typeIdx = 0;
+    Object.entries(byType).forEach(function(entry) {
+        var name = entry[0];
+        var count = entry[1];
+        var pct = (count / total * 100).toFixed(1);
+        var col = typeColors[typeIdx % typeColors.length];
+        typeBarHtml += '<div class="asat-summary-segment" style="width:' + pct + '%;background:' + col + '"><span class="seg-label">' + name.toUpperCase().substring(0, 12) + '</span></div>';
+        typeIdx++;
+    });
+    typeIdx = 0;
+    Object.entries(byType).sort(function(a, b) { return b[1] - a[1]; }).forEach(function(entry) {
+        var name = entry[0];
+        var count = entry[1];
+        var col = typeColors[typeIdx % typeColors.length];
+        typeBreakHtml += '<div class="cat-breakdown"><span class="cat-label">' + name.toUpperCase() + '</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + (count / total * 100) + '%;background:' + col + '"></div></div><span class="cat-count">' + count + '</span></div>';
+        typeIdx++;
+    });
 
-            <div class="filter-tabs" id="missile-tabs">
-                <div class="filter-tab active" data-filter="all">ALL (${total})</div>
-                <div class="filter-tab" data-filter="PRC" style="color:#FF2020">PRC (${byCountry['PRC'] || 0})</div>
-                <div class="filter-tab" data-filter="Russia" style="color:#FF8C00">RUS (${byCountry['Russia'] || 0})</div>
-                <div class="filter-tab" data-filter="DPRK" style="color:#C040FF">DPRK (${byCountry['DPRK'] || 0})</div>
-                <div class="filter-tab" data-filter="Iran" style="color:#FFD700">IRAN (${byCountry['Iran'] || 0})</div>
-                <div class="filter-tab" data-filter="critical" style="color:var(--red)">CRITICAL (${critical.length})</div>
-            </div>
-            <div id="missile-detail"></div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9888;</div><div><div class="tb-val">' + critical.length + '</div><div class="tb-lbl">CRITICAL</div></div></div>' +
+            '<div class="tb-cell warning"><div class="tb-icon">&#9888;</div><div><div class="tb-val">' + high.length + '</div><div class="tb-lbl">HIGH</div></div></div>' +
+            '<div class="tb-cell alert"><div class="tb-icon">&#9670;</div><div><div class="tb-val">' + medium.length + '</div><div class="tb-lbl">MEDIUM</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + total + '</div><div class="tb-lbl">TOTAL SYSTEMS</div></div></div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:4px">' +
+            '<div class="panel"><div class="panel-head"><h3>BY NATION</h3></div><div class="panel-body">' +
+                '<div class="asat-summary-bar">' + nationBarHtml + '</div>' + nationBreakHtml +
+            '</div></div>' +
+            '<div class="panel"><div class="panel-head"><h3>BY TYPE</h3></div><div class="panel-body">' +
+                '<div class="asat-summary-bar">' + typeBarHtml + '</div>' + typeBreakHtml +
+            '</div></div>' +
+        '</div>' +
+        '<div class="filter-tabs" id="missile-tabs">' +
+            '<div class="filter-tab active" data-filter="all">ALL (' + total + ')</div>' +
+            '<div class="filter-tab" data-filter="PRC" style="color:#FF2020">PRC (' + (byCountry['PRC'] || 0) + ')</div>' +
+            '<div class="filter-tab" data-filter="Russia" style="color:#FF8C00">RUS (' + (byCountry['Russia'] || 0) + ')</div>' +
+            '<div class="filter-tab" data-filter="DPRK" style="color:#C040FF">DPRK (' + (byCountry['DPRK'] || 0) + ')</div>' +
+            '<div class="filter-tab" data-filter="Iran" style="color:#FFD700">IRAN (' + (byCountry['Iran'] || 0) + ')</div>' +
+            '<div class="filter-tab" data-filter="critical" style="color:var(--red)">CRITICAL (' + critical.length + ')</div>' +
+        '</div>' +
+        '<div id="missile-detail"></div></div>';
 
     function renderSystems(filter) {
-        let systems = allSystems;
-        if (filter === 'critical') systems = allSystems.filter(s => s.threat_level === 'critical');
-        else if (filter !== 'all') systems = allSystems.filter(s => s.country === filter);
+        var systems = allSystems;
+        if (filter === 'critical') systems = allSystems.filter(function(s) { return s.threat_level === 'critical'; });
+        else if (filter !== 'all') systems = allSystems.filter(function(s) { return s.country === filter; });
 
-        document.getElementById('missile-detail').innerHTML = `
-            <div class="asat-grid">
-            ${systems.map(s => {
-                const cCode = s.country === 'Russia' ? 'CIS' : s.country === 'DPRK' ? 'NKOR' : s.country === 'Iran' ? 'IRAN' : s.country;
-                return `
-                <div class="threat-card severity-${s.threat_level || 'medium'}">
-                    <div class="tc-header">
-                        ${badge(s.threat_level || 'medium')}
-                        <span class="tc-title">${s.name}</span>
-                        ${countryBadge(cCode)}
-                    </div>
-                    <div class="tc-body">${s.description || ''}</div>
-                    <div class="tc-meta" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
-                        <span>TYPE: <span style="color:var(--amber)">${(s.type || '').replace(/_/g, ' ').toUpperCase()}</span></span>
-                        <span>STATUS: <span style="color:${s.status === 'operational' ? 'var(--red)' : 'var(--text)'}">${(s.status || '?').toUpperCase()}</span></span>
-                        ${s.max_altitude_km ? `<span>MAX ALT: <span style="color:var(--cyan)">${s.max_altitude_km.toLocaleString()} KM</span></span>` : ''}
-                        ${s.first_tested ? `<span>FIRST TEST: ${s.first_tested}</span>` : ''}
-                    </div>
-                    ${s.evidence ? `<div class="tc-source">SOURCE: ${s.evidence}</div>` : ''}
-                </div>`;
-            }).join('')}
-            </div>
-        `;
+        var html = '<div class="asat-grid">';
+        systems.forEach(function(s) {
+            var cCode = s.country === 'Russia' ? 'CIS' : s.country === 'DPRK' ? 'NKOR' : s.country === 'Iran' ? 'IRAN' : s.country;
+            var isCrit = s.threat_level === 'critical';
+            html += '<div class="threat-card severity-' + (s.threat_level || 'medium') + (isCrit ? ' critical-glow' : '') + '">' +
+                '<div class="tc-header">' +
+                    badge(s.threat_level || 'medium') +
+                    ' <span class="tc-title">' + s.name + '</span> ' +
+                    countryBadge(cCode) +
+                '</div>' +
+                '<div class="tc-body">' + (s.description || '') + '</div>' +
+                '<div class="tc-meta" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">' +
+                    '<span>TYPE: <span style="color:var(--amber)">' + (s.type || '').replace(/_/g, ' ').toUpperCase() + '</span></span>' +
+                    '<span>STATUS: <span style="color:' + (s.status === 'operational' ? 'var(--red)' : 'var(--text)') + '">' + (s.status || '?').toUpperCase() + '</span></span>' +
+                    (s.max_altitude_km ? '<span>MAX ALT: <span style="color:var(--cyan)">' + s.max_altitude_km.toLocaleString() + ' KM</span></span>' : '') +
+                    (s.first_tested ? '<span>FIRST TEST: ' + s.first_tested + '</span>' : '') +
+                '</div>' +
+                (s.evidence ? '<div class="tc-source">SOURCE: ' + s.evidence + '</div>' : '') +
+            '</div>';
+        });
+        html += '</div>';
+        document.getElementById('missile-detail').innerHTML = html;
     }
 
     renderSystems('all');
-    el.querySelectorAll('#missile-tabs .filter-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            el.querySelectorAll('#missile-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+    el.querySelectorAll('#missile-tabs .filter-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            el.querySelectorAll('#missile-tabs .filter-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             renderSystems(tab.dataset.filter);
         });
@@ -1349,15 +1461,19 @@ Pages.missile = async function (el) {
    ================================================================ */
 Pages.fvey = async function (el) {
     el.innerHTML = '<div class="loading">ASSESSING FVEY POSTURE</div>';
-    const [vulns, recs, threatOv] = await Promise.all([
+    var results = await Promise.all([
         api('/api/threat/vulnerabilities'),
         api('/api/threat/recommendations'),
         api('/api/threat/overview'),
     ]);
 
-    const criticalVulns = (vulns || []).filter(v => v.severity === 'critical');
-    const highVulns = (vulns || []).filter(v => v.severity === 'high');
-    const medVulns = (vulns || []).filter(v => v.severity === 'medium');
+    var vulns = results[0] || [];
+    var recs = results[1] || [];
+    var threatOv = results[2] || {};
+
+    var criticalVulns = vulns.filter(function(v) { return v.severity === 'critical'; });
+    var highVulns = vulns.filter(function(v) { return v.severity === 'high'; });
+    var medVulns = vulns.filter(function(v) { return v.severity === 'medium'; });
 
     function calcResilience(severity) {
         if (severity === 'critical') return Math.floor(Math.random() * 15 + 10);
@@ -1366,90 +1482,93 @@ Pages.fvey = async function (el) {
         return Math.floor(Math.random() * 20 + 70);
     }
 
-    const totalVulns = (vulns || []).length;
-    const critWeight = criticalVulns.length * 4;
-    const highWeight = highVulns.length * 2;
-    const medWeight = medVulns.length * 1;
-    const overallResilience = totalVulns > 0 ? Math.max(10, Math.min(85, Math.round(100 - ((critWeight + highWeight + medWeight) / totalVulns) * 20))) : 50;
+    var totalVulns = vulns.length;
+    var critWeight = criticalVulns.length * 4;
+    var highWeight = highVulns.length * 2;
+    var medWeight = medVulns.length * 1;
+    var overallResilience = totalVulns > 0 ? Math.max(10, Math.min(85, Math.round(100 - ((critWeight + highWeight + medWeight) / totalVulns) * 20))) : 50;
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9888;</div><div><div class="tb-val">${criticalVulns.length}</div><div class="tb-lbl">CRITICAL</div></div></div>
-                <div class="tb-cell warning"><div class="tb-icon">&#9888;</div><div><div class="tb-val">${highVulns.length}</div><div class="tb-lbl">HIGH</div></div></div>
-                <div class="tb-cell alert"><div class="tb-icon">&#9670;</div><div><div class="tb-val">${medVulns.length}</div><div class="tb-lbl">MEDIUM</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9881;</div><div><div class="tb-val">${(recs || []).length}</div><div class="tb-lbl">RECOMMENDATIONS</div></div></div>
-                <div class="tb-cell" style="border-left:2px solid ${resilienceColor(overallResilience)}">
-                    <div class="tb-icon" style="color:${resilienceColor(overallResilience)}">&#9733;</div>
-                    <div><div class="tb-val" style="color:${resilienceColor(overallResilience)}">${overallResilience}%</div><div class="tb-lbl">RESILIENCE</div></div>
-                </div>
-            </div>
+    // Build resilience bars
+    var resilienceBarsHtml = '';
+    vulns.forEach(function(v) {
+        var score = calcResilience(v.severity);
+        resilienceBarsHtml += buildResilienceBar(
+            v.title.substring(0, 30),
+            score,
+            severityDots(v.severity || 'high')
+        );
+    });
 
-            <div class="panel mb-2">
-                <div class="panel-head"><h3>FVEY SPACE ARCHITECTURE RESILIENCE ASSESSMENT</h3><span class="ph-meta">${zulu()}</span></div>
-                <div class="panel-body">
-                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
-                        <div style="font-size:36px;color:${resilienceColor(overallResilience)};text-shadow:0 0 15px ${resilienceColor(overallResilience)}">${overallResilience}%</div>
-                        <div>
-                            <div style="font-size:11px;color:var(--white);letter-spacing:1px">OVERALL RESILIENCE SCORE</div>
-                            <div style="font-size:9px;color:var(--text-dim);margin-top:2px">${overallResilience < 40 ? 'CRITICAL -- Immediate action required across multiple domains' : overallResilience < 70 ? 'DEGRADED -- Significant vulnerabilities require priority attention' : 'ADEQUATE -- Maintain vigilance and continue hardening'}</div>
-                        </div>
-                    </div>
-                    ${(vulns || []).map(v => {
-                        const score = calcResilience(v.severity);
-                        return `
-                        <div class="resilience-meter">
-                            <span class="resilience-label">${v.title.substring(0, 30)}</span>
-                            ${severityDots(v.severity || 'high')}
-                            <div class="resilience-bar-track">
-                                <div class="resilience-bar-fill" style="width:${score}%;background:${resilienceColor(score)}"></div>
-                            </div>
-                            <span class="resilience-score" style="color:${resilienceColor(score)}">${score}%</span>
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>
+    // Build vulnerability cards
+    var vulnCardsHtml = '';
+    vulns.forEach(function(v) {
+        vulnCardsHtml += '<div class="threat-card severity-' + (v.severity || 'high') + '">' +
+            '<div class="tc-header">' +
+                severityDots(v.severity || 'high') + ' ' +
+                badge(v.severity || 'high') + ' ' +
+                '<span class="tc-title">' + v.title + '</span>' +
+            '</div>' +
+            '<div class="tc-body">' + v.description + '</div>' +
+            (v.impact ? '<div class="tc-meta" style="color:var(--red)">IMPACT: ' + v.impact + '</div>' : '') +
+            (v.mitigation ? '<div class="tc-source" style="color:var(--green)">MITIGATION: ' + v.mitigation + '</div>' : '') +
+            '</div>';
+    });
 
-            <div class="grid-2">
-                <div class="panel">
-                    <div class="panel-head"><h3>VULNERABILITY DETAILS</h3><span class="ph-meta"><span class="badge badge-critical">${totalVulns} IDENTIFIED</span></span></div>
-                    <div class="panel-body" style="max-height:calc(100vh - 420px)">
-                        ${(vulns || []).map(v => `
-                            <div class="threat-card severity-${v.severity || 'high'}">
-                                <div class="tc-header">
-                                    ${severityDots(v.severity || 'high')}
-                                    ${badge(v.severity || 'high')}
-                                    <span class="tc-title">${v.title}</span>
-                                </div>
-                                <div class="tc-body">${v.description}</div>
-                                ${v.impact ? `<div class="tc-meta" style="color:var(--red)">IMPACT: ${v.impact}</div>` : ''}
-                                ${v.mitigation ? `<div class="tc-source" style="color:var(--green)">MITIGATION: ${v.mitigation}</div>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>POLICY RECOMMENDATIONS</h3><span class="ph-meta"><span class="badge badge-low">ADVISE</span> ${(recs || []).length}</span></div>
-                    <div class="panel-body" style="max-height:calc(100vh - 420px)">
-                        ${(recs || []).map((r, i) => `
-                            <div class="threat-card severity-${r.priority || 'medium'}" style="border-left-color:var(--green)">
-                                <div class="tc-header">
-                                    <span style="color:var(--text-dim);font-size:9px;min-width:18px">#${i + 1}</span>
-                                    ${badge(r.priority || 'medium')}
-                                    <span class="tc-title">${r.title}</span>
-                                </div>
-                                <div class="tc-body">${r.description}</div>
-                                <div class="tc-meta" style="display:flex;gap:12px">
-                                    ${r.cost_estimate ? `<span>COST: <span style="color:var(--cyan)">${r.cost_estimate}</span></span>` : ''}
-                                    ${r.timeline ? `<span>TIMELINE: <span style="color:var(--amber)">${r.timeline}</span></span>` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    // Build recommendation cards
+    var recCardsHtml = '';
+    recs.forEach(function(r, i) {
+        recCardsHtml += '<div class="threat-card severity-' + (r.priority || 'medium') + '" style="border-left-color:var(--green)">' +
+            '<div class="tc-header">' +
+                '<span class="rec-number">#' + (i + 1) + '</span> ' +
+                badge(r.priority || 'medium') + ' ' +
+                '<span class="tc-title">' + r.title + '</span>' +
+            '</div>' +
+            '<div class="tc-body">' + r.description + '</div>' +
+            '<div class="tc-meta" style="display:flex;gap:12px">' +
+                (r.cost_estimate ? '<span>COST: <span style="color:var(--cyan)">' + r.cost_estimate + '</span></span>' : '') +
+                (r.timeline ? '<span>TIMELINE: <span style="color:var(--amber)">' + r.timeline + '</span></span>' : '') +
+            '</div>' +
+            '</div>';
+    });
+
+    var overallStatusText = overallResilience < 40 ? 'CRITICAL -- Immediate action required across multiple domains' :
+        overallResilience < 70 ? 'DEGRADED -- Significant vulnerabilities require priority attention' :
+        'ADEQUATE -- Maintain vigilance and continue hardening';
+
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9888;</div><div><div class="tb-val">' + criticalVulns.length + '</div><div class="tb-lbl">CRITICAL</div></div></div>' +
+            '<div class="tb-cell warning"><div class="tb-icon">&#9888;</div><div><div class="tb-val">' + highVulns.length + '</div><div class="tb-lbl">HIGH</div></div></div>' +
+            '<div class="tb-cell alert"><div class="tb-icon">&#9670;</div><div><div class="tb-val">' + medVulns.length + '</div><div class="tb-lbl">MEDIUM</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9881;</div><div><div class="tb-val">' + recs.length + '</div><div class="tb-lbl">RECOMMENDATIONS</div></div></div>' +
+            '<div class="tb-cell" style="border-left:2px solid ' + resilienceColor(overallResilience) + '">' +
+                '<div class="tb-icon" style="color:' + resilienceColor(overallResilience) + '">&#9733;</div>' +
+                '<div><div class="tb-val" style="color:' + resilienceColor(overallResilience) + '">' + overallResilience + '%</div><div class="tb-lbl">RESILIENCE</div></div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="panel mb-2">' +
+            '<div class="panel-head"><h3>FVEY SPACE ARCHITECTURE RESILIENCE ASSESSMENT</h3><span class="ph-meta">' + zulu() + '</span></div>' +
+            '<div class="panel-body">' +
+                '<div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">' +
+                    '<div style="font-size:36px;color:' + resilienceColor(overallResilience) + ';text-shadow:0 0 15px ' + resilienceColor(overallResilience) + '">' + overallResilience + '%</div>' +
+                    '<div>' +
+                        '<div style="font-size:11px;color:var(--white);letter-spacing:1px">OVERALL RESILIENCE SCORE</div>' +
+                        '<div style="font-size:9px;color:var(--text-dim);margin-top:2px">' + overallStatusText + '</div>' +
+                    '</div>' +
+                '</div>' +
+                resilienceBarsHtml +
+            '</div>' +
+        '</div>' +
+        '<div class="grid-2">' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>VULNERABILITY DETAILS</h3><span class="ph-meta"><span class="badge badge-critical">' + totalVulns + ' IDENTIFIED</span></span></div>' +
+                '<div class="panel-body" style="max-height:calc(100vh - 420px)">' + vulnCardsHtml + '</div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>POLICY RECOMMENDATIONS</h3><span class="ph-meta"><span class="badge badge-low">ADVISE</span> ' + recs.length + '</span></div>' +
+                '<div class="panel-body" style="max-height:calc(100vh - 420px)">' + recCardsHtml + '</div>' +
+            '</div>' +
+        '</div></div>';
 };
 
 
@@ -1460,7 +1579,7 @@ Pages.fvey = async function (el) {
 Pages.strategy = async function (el) {
     el.innerHTML = '<div class="loading">GENERATING STRATEGIC ANALYSIS</div>';
 
-    const [overview, scenarios, vulns, recs, hotspots, research, brief, arxiv] = await Promise.all([
+    var results = await Promise.all([
         api('/api/threat/overview'),
         api('/api/threat/scenarios'),
         api('/api/threat/vulnerabilities'),
@@ -1471,203 +1590,192 @@ Pages.strategy = async function (el) {
         api('/api/intel/arxiv'),
     ]);
 
-    const ov = overview || {};
-    const level = (ov.overall_threat_level || ov.threat_level || 'HIGH').toUpperCase();
+    var ov = results[0] || {};
+    var scenarios = results[1] || [];
+    var vulns = results[2] || [];
+    var recs = results[3] || [];
+    var hotspots = results[4];
+    var research = results[5] || [];
+    var brief = results[6];
+    var arxiv = results[7] || [];
 
-    const critVulns = (vulns || []).filter(v => v.severity === 'critical').length;
-    const highVulns = (vulns || []).filter(v => v.severity === 'high').length;
-    const totalScenarios = (scenarios || []).length;
+    var level = (ov.overall_threat_level || ov.threat_level || 'HIGH').toUpperCase();
+    var critVulns = vulns.filter(function(v) { return v.severity === 'critical'; }).length;
+    var highVulns = vulns.filter(function(v) { return v.severity === 'high'; }).length;
+    var totalScenarios = scenarios.length;
+    var hs = (hotspots && hotspots.hotspots) || [];
+    var mapH = hs.length > 0 ? Math.max(350, window.innerHeight * 0.35) : 0;
 
-    const hs = (hotspots && hotspots.hotspots) || [];
-    const mapH = hs.length > 0 ? Math.max(350, window.innerHeight * 0.35) : 0;
+    // Build scenarios
+    var scenariosHtml = '';
+    scenarios.forEach(function(s, idx) {
+        var phasesHtml = '';
+        if (s.phases && s.phases.length) {
+            phasesHtml = '<div style="margin-bottom:8px"><span class="intel-label" style="color:var(--red)">ESCALATION PHASES</span><ol class="phase-list" style="margin-top:4px">';
+            s.phases.forEach(function(p) {
+                phasesHtml += '<li style="margin-bottom:4px;line-height:1.4">' + p + '</li>';
+            });
+            phasesHtml += '</ol></div>';
+        }
+        scenariosHtml += '<div class="scenario-section' + (idx === 0 ? ' open' : '') + '" id="scenario-' + idx + '">' +
+            '<div class="scenario-header" onclick="document.getElementById(\'scenario-' + idx + '\').classList.toggle(\'open\')">' +
+                '<span class="chevron">&#9654;</span> ' +
+                badge(s.severity || s.probability || 'high') + ' ' +
+                '<span style="color:var(--white);font-size:11px;flex:1">' + (s.title || s.name) + '</span>' +
+                (s.probability ? '<span style="font-size:8px;color:var(--text-dim);letter-spacing:1px">P: ' + s.probability.toUpperCase() + '</span>' : '') +
+                (s.timeframe ? ' <span style="font-size:8px;color:var(--text-muted)">' + s.timeframe + '</span>' : '') +
+            '</div>' +
+            '<div class="scenario-body"><div class="scenario-body-inner">' +
+                '<div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">' + (s.description || '') + '</div>' +
+                phasesHtml +
+                (s.fvey_response ? '<div><span class="intel-label" style="color:var(--green)">RECOMMENDED FVEY RESPONSE</span><div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:3px">' + s.fvey_response + '</div></div>' : '') +
+            '</div></div>' +
+        '</div>';
+    });
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <!-- Strategic Banner -->
-            <div class="strategy-banner">
-                <div class="strategy-title">FIVE EYES SPACE DOMAIN THREAT ASSESSMENT</div>
-                <div class="strategy-subtitle">UNCLASSIFIED // OSINT-DERIVED // ${new Date().toISOString().substring(0, 10)} // ${zulu()}</div>
-                <div class="strategy-threat-display">
-                    <div class="strategy-threat-level ${level.toLowerCase()}">${level}</div>
-                </div>
-                <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">${critVulns} CRITICAL VULNERABILITIES | ${highVulns} HIGH VULNERABILITIES | ${totalScenarios} ESCALATION SCENARIOS MODELLED</div>
-            </div>
+    // Build hotspot cards
+    var hotspotCardsHtml = '';
+    hs.slice(0, 6).forEach(function(h) {
+        var passesHtml = '';
+        if (h.passes_by_country) {
+            Object.keys(h.passes_by_country).forEach(function(c) {
+                var n = h.passes_by_country[c];
+                passesHtml += '<div class="fd-row">' +
+                    '<span class="fd-nation" style="color:' + countryColor(c) + ';font-size:9px">' + c + '</span>' +
+                    '<div class="fd-bar-wrap"><div class="fd-bar" style="width:' + Math.min(n / h.total_adversary_passes * 100, 100) + '%;background:' + countryColor(c) + '"></div></div>' +
+                    '<span class="fd-count" style="font-size:10px">' + n + '</span>' +
+                '</div>';
+            });
+        }
+        var catHtml = '';
+        if (h.passes_by_category) {
+            var catParts = [];
+            Object.keys(h.passes_by_category).forEach(function(c) {
+                catParts.push(c.replace(/_/g, ' ') + ':' + h.passes_by_category[c]);
+            });
+            catHtml = '<div style="margin-top:4px;font-size:8px;color:var(--text-muted)">' + catParts.join(' | ') + '</div>';
+        }
+        var topThreatsHtml = '';
+        if (h.top_threats && h.top_threats.length) {
+            topThreatsHtml = '<div style="margin-top:4px;border-top:1px solid var(--border);padding-top:3px">';
+            h.top_threats.slice(0, 3).forEach(function(t) {
+                topThreatsHtml += '<div style="font-size:8px;color:var(--text-dim)">' + countryBadge(t.country) + ' ' + t.name + ' <span style="color:var(--text-muted)">' + Math.round(t.alt_km || 0) + 'KM</span></div>';
+            });
+            topThreatsHtml += '</div>';
+        }
+        hotspotCardsHtml += '<div class="panel">' +
+            '<div class="panel-head"><h3>' + h.name + '</h3><span class="ph-meta" style="color:var(--red)">' + h.total_adversary_passes + ' PASSES</span></div>' +
+            '<div class="panel-body">' + passesHtml + catHtml + topThreatsHtml + '</div></div>';
+    });
 
-            <!-- Executive Summary -->
-            <div class="panel mb-4">
-                <div class="panel-head"><h3>EXECUTIVE SUMMARY</h3><span class="ph-meta">ASSESSMENT PERIOD: CURRENT</span></div>
-                <div class="panel-body">
-                    <div style="font-size:10px;color:var(--text);line-height:1.7;margin-bottom:8px">${ov.summary || ''}</div>
-                    ${brief ? `<div class="intel-summary" style="margin-top:6px"><strong>DAILY BRIEF:</strong> ${typeof brief === 'string' ? brief.substring(0, 400) : (brief.summary || brief.assessment || JSON.stringify(brief)).substring(0, 400)}${typeof brief === 'string' && brief.length > 400 ? '...' : ''}</div>` : ''}
-                </div>
-            </div>
+    // Build research feed
+    var researchHtml = '';
+    if (research.length) {
+        research.slice(0, 12).forEach(function(r) {
+            researchHtml += '<a href="' + (r.url || '#') + '" target="_blank" rel="noopener" class="news-line">' +
+                '<span class="nl-title">' + r.title + '</span>' +
+                '<span class="nl-meta">' + (r.source || 'OSINT') + (r.relevance_tag ? ' // ' + r.relevance_tag : '') + ' // ' + (r.published_at ? timeAgo(r.published_at) : '') + '</span>' +
+                (r.summary ? '<div style="font-size:8px;color:var(--text-muted);line-height:1.3;margin-top:1px">' + r.summary.substring(0, 120) + (r.summary.length > 120 ? '...' : '') + '</div>' : '') +
+                '</a>';
+        });
+    } else {
+        researchHtml = '<div class="empty-state">NO RESEARCH DATA</div>';
+    }
 
-            <!-- Key Concerns -->
-            ${ov.key_concerns?.length ? `
-            <div class="panel mb-4">
-                <div class="panel-head"><h3>KEY CONCERNS</h3><span class="ph-meta"><span class="badge badge-critical">${ov.key_concerns.length} IDENTIFIED</span></span></div>
-                <div class="panel-body">
-                    <div class="asat-grid">
-                    ${ov.key_concerns.map(c => `
-                        <div class="threat-card severity-${c.severity || 'high'}">
-                            <div class="tc-header">
-                                ${severityDots(c.severity || 'high')}
-                                ${badge(c.severity || 'high')}
-                                <span class="tc-title">${c.title}</span>
-                            </div>
-                            <div class="tc-body">${c.detail || c.description || ''}</div>
-                            ${c.evidence ? `<div class="tc-source">EVIDENCE: ${c.evidence}</div>` : ''}
-                        </div>
-                    `).join('')}
-                    </div>
-                </div>
-            </div>
-            ` : ''}
+    // Build arxiv feed
+    var arxivHtml = '';
+    if (arxiv.length) {
+        arxiv.slice(0, 12).forEach(function(a) {
+            arxivHtml += '<a href="' + (a.url || '#') + '" target="_blank" rel="noopener" class="news-line">' +
+                '<span class="nl-title">' + a.title + '</span>' +
+                '<span class="nl-meta">' + (a.source || 'arXiv') + (a.relevance_tag ? ' // ' + a.relevance_tag : '') + ' // ' + (a.published_at ? timeAgo(a.published_at) : '') + '</span>' +
+                (a.summary ? '<div style="font-size:8px;color:var(--text-muted);line-height:1.3;margin-top:1px">' + a.summary.substring(0, 120) + (a.summary.length > 120 ? '...' : '') + '</div>' : '') +
+                '</a>';
+        });
+    } else {
+        arxivHtml = '<div class="empty-state">NO ARXIV DATA</div>';
+    }
 
-            <!-- Conflict Escalation Scenarios -->
-            <div class="panel mb-4">
-                <div class="panel-head"><h3>CONFLICT ESCALATION SCENARIOS</h3><span class="ph-meta"><span class="badge badge-critical">WARGAME</span> ${totalScenarios} SCENARIOS</span></div>
-                <div class="panel-body" style="padding:4px">
-                    ${(scenarios || []).map((s, idx) => {
-                        const sevColor = s.severity === 'critical' ? 'var(--red)' : s.severity === 'high' ? 'var(--cis)' : 'var(--amber)';
-                        return `
-                        <div class="scenario-section${idx === 0 ? ' open' : ''}" id="scenario-${idx}">
-                            <div class="scenario-header" onclick="document.getElementById('scenario-${idx}').classList.toggle('open')">
-                                <span class="chevron">&#9654;</span>
-                                ${badge(s.severity || s.probability || 'high')}
-                                <span style="color:var(--white);font-size:11px;flex:1">${s.title || s.name}</span>
-                                ${s.probability ? `<span style="font-size:8px;color:var(--text-dim);letter-spacing:1px">P: ${s.probability.toUpperCase()}</span>` : ''}
-                                ${s.timeframe ? `<span style="font-size:8px;color:var(--text-muted)">${s.timeframe}</span>` : ''}
-                            </div>
-                            <div class="scenario-body">
-                                <div class="scenario-body-inner">
-                                    <div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">${s.description || ''}</div>
-                                    ${s.phases?.length ? `
-                                        <div style="margin-bottom:8px">
-                                            <span class="intel-label" style="color:${sevColor}">ESCALATION PHASES</span>
-                                            <ol class="phase-list" style="margin-top:4px">
-                                                ${s.phases.map(p => `<li style="margin-bottom:4px;line-height:1.4">${p}</li>`).join('')}
-                                            </ol>
-                                        </div>
-                                    ` : ''}
-                                    ${s.fvey_response ? `
-                                        <div>
-                                            <span class="intel-label" style="color:var(--green)">RECOMMENDED FVEY RESPONSE</span>
-                                            <div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:3px">${s.fvey_response}</div>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>
+    var briefText = '';
+    if (brief) {
+        briefText = typeof brief === 'string' ? brief.substring(0, 400) : (brief.summary || brief.assessment || JSON.stringify(brief)).substring(0, 400);
+    }
 
-            <!-- Hotspot Analysis Map -->
-            ${hs.length ? `
-            <div class="panel mb-4">
-                <div class="panel-head"><h3>HOTSPOT ANALYSIS</h3><span class="ph-meta">${hs.length} ZONES TRACKED</span></div>
-                <div class="panel-body" style="padding:0">
-                    <div id="strategy-hotspot-map" class="map-container" style="height:${mapH}px;min-height:${mapH}px"></div>
-                </div>
-            </div>
-            <div class="grid-3 mb-4">
-                ${hs.slice(0, 6).map(h => `
-                    <div class="panel">
-                        <div class="panel-head"><h3>${h.name}</h3><span class="ph-meta" style="color:var(--red)">${h.total_adversary_passes} PASSES</span></div>
-                        <div class="panel-body">
-                            ${h.passes_by_country ? Object.entries(h.passes_by_country).map(([c, n]) => `
-                                <div class="fd-row">
-                                    <span class="fd-nation" style="color:${countryColor(c)};font-size:9px">${c}</span>
-                                    <div class="fd-bar-wrap"><div class="fd-bar" style="width:${Math.min(n / h.total_adversary_passes * 100, 100)}%;background:${countryColor(c)}"></div></div>
-                                    <span class="fd-count" style="font-size:10px">${n}</span>
-                                </div>
-                            `).join('') : ''}
-                            ${h.passes_by_category ? `<div style="margin-top:4px;font-size:8px;color:var(--text-muted)">${Object.entries(h.passes_by_category).map(([c, n]) => c.replace(/_/g, ' ') + ':' + n).join(' | ')}</div>` : ''}
-                            ${h.top_threats?.length ? `
-                                <div style="margin-top:4px;border-top:1px solid var(--border);padding-top:3px">
-                                    ${h.top_threats.slice(0, 3).map(t => `<div style="font-size:8px;color:var(--text-dim)">${countryBadge(t.country)} ${t.name} <span style="color:var(--text-muted)">${Math.round(t.alt_km || 0)}KM</span></div>`).join('')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            ` : ''}
-
-            <!-- Research + arXiv Feed -->
-            <div class="grid-2">
-                <div class="panel">
-                    <div class="panel-head"><h3>INTELLIGENCE RESEARCH FEED</h3><span class="ph-meta">${(research || []).length} ITEMS</span></div>
-                    <div class="panel-body" style="max-height:400px">
-                        ${(research || []).length ? research.slice(0, 12).map(r => `
-                            <a href="${r.url || '#'}" target="_blank" rel="noopener" class="news-line">
-                                <span class="nl-title">${r.title}</span>
-                                <span class="nl-meta">${r.source || 'OSINT'} ${r.relevance_tag ? '// ' + r.relevance_tag : ''} // ${r.published_at ? timeAgo(r.published_at) : ''}</span>
-                                ${r.summary ? `<div style="font-size:8px;color:var(--text-muted);line-height:1.3;margin-top:1px">${r.summary.substring(0, 120)}${r.summary.length > 120 ? '...' : ''}</div>` : ''}
-                            </a>
-                        `).join('') : '<div class="empty-state">NO RESEARCH DATA</div>'}
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>ACADEMIC / ARXIV PAPERS</h3><span class="ph-meta">${(arxiv || []).length} PAPERS</span></div>
-                    <div class="panel-body" style="max-height:400px">
-                        ${(arxiv || []).length ? arxiv.slice(0, 12).map(a => `
-                            <a href="${a.url || '#'}" target="_blank" rel="noopener" class="news-line">
-                                <span class="nl-title">${a.title}</span>
-                                <span class="nl-meta">${a.source || 'arXiv'} ${a.relevance_tag ? '// ' + a.relevance_tag : ''} // ${a.published_at ? timeAgo(a.published_at) : ''}</span>
-                                ${a.summary ? `<div style="font-size:8px;color:var(--text-muted);line-height:1.3;margin-top:1px">${a.summary.substring(0, 120)}${a.summary.length > 120 ? '...' : ''}</div>` : ''}
-                            </a>
-                        `).join('') : '<div class="empty-state">NO ARXIV DATA</div>'}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="strategy-banner">' +
+            '<div class="strategy-title">FIVE EYES SPACE DOMAIN THREAT ASSESSMENT</div>' +
+            '<div class="strategy-subtitle">UNCLASSIFIED // OSINT-DERIVED // ' + new Date().toISOString().substring(0, 10) + ' // ' + zulu() + '</div>' +
+            '<div class="strategy-threat-display">' +
+                '<div class="strategy-threat-level ' + level.toLowerCase() + '">' + level + '</div>' +
+            '</div>' +
+            '<div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">' + critVulns + ' CRITICAL VULNERABILITIES | ' + highVulns + ' HIGH VULNERABILITIES | ' + totalScenarios + ' ESCALATION SCENARIOS MODELLED</div>' +
+        '</div>' +
+        '<div class="panel mb-4">' +
+            '<div class="panel-head"><h3>EXECUTIVE SUMMARY</h3><span class="ph-meta">ASSESSMENT PERIOD: CURRENT</span></div>' +
+            '<div class="panel-body">' +
+                '<div style="font-size:10px;color:var(--text);line-height:1.7;margin-bottom:8px">' + (ov.summary || '') + '</div>' +
+                (brief ? '<div class="intel-summary" style="margin-top:6px"><strong>DAILY BRIEF:</strong> ' + briefText + '</div>' : '') +
+            '</div>' +
+        '</div>' +
+        (ov.key_concerns && ov.key_concerns.length ? '<div class="panel mb-4">' +
+            '<div class="panel-head"><h3>KEY CONCERNS</h3><span class="ph-meta"><span class="badge badge-critical">' + ov.key_concerns.length + ' IDENTIFIED</span></span></div>' +
+            '<div class="panel-body"><div class="asat-grid">' + (function() {
+                var kc = '';
+                ov.key_concerns.forEach(function(c) {
+                    kc += '<div class="threat-card severity-' + (c.severity || 'high') + '">' +
+                        '<div class="tc-header">' + severityDots(c.severity || 'high') + ' ' + badge(c.severity || 'high') + ' <span class="tc-title">' + c.title + '</span></div>' +
+                        '<div class="tc-body">' + (c.detail || c.description || '') + '</div>' +
+                        (c.evidence ? '<div class="tc-source">EVIDENCE: ' + c.evidence + '</div>' : '') +
+                    '</div>';
+                });
+                return kc;
+            })() + '</div></div></div>' : '') +
+        '<div class="panel mb-4">' +
+            '<div class="panel-head"><h3>CONFLICT ESCALATION SCENARIOS</h3><span class="ph-meta"><span class="badge badge-critical">WARGAME</span> ' + totalScenarios + ' SCENARIOS</span></div>' +
+            '<div class="panel-body" style="padding:4px">' + scenariosHtml + '</div>' +
+        '</div>' +
+        (hs.length ? '<div class="panel mb-4">' +
+            '<div class="panel-head"><h3>HOTSPOT ANALYSIS</h3><span class="ph-meta">' + hs.length + ' ZONES TRACKED</span></div>' +
+            '<div class="panel-body" style="padding:0"><div id="strategy-hotspot-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div>' +
+        '</div><div class="grid-3 mb-4">' + hotspotCardsHtml + '</div>' : '') +
+        '<div class="grid-2">' +
+            '<div class="panel"><div class="panel-head"><h3>INTELLIGENCE RESEARCH FEED</h3><span class="ph-meta">' + research.length + ' ITEMS</span></div>' +
+                '<div class="panel-body" style="max-height:400px">' + researchHtml + '</div></div>' +
+            '<div class="panel"><div class="panel-head"><h3>ACADEMIC / ARXIV PAPERS</h3><span class="ph-meta">' + arxiv.length + ' PAPERS</span></div>' +
+                '<div class="panel-body" style="max-height:400px">' + arxivHtml + '</div></div>' +
+        '</div></div>';
 
     // Hotspot map
     if (hs.length) {
-        setTimeout(() => {
-            const mapEl = document.getElementById('strategy-hotspot-map');
+        setTimeout(function() {
+            var mapEl = document.getElementById('strategy-hotspot-map');
             if (!mapEl) return;
             mapEl.style.height = mapH + 'px';
-            const hmap = makeMap('strategy-hotspot-map', [20, 80], 3);
+            var hmap = makeMap('strategy-hotspot-map', [20, 80], 3);
             if (!hmap) return;
             storeMap(hmap);
 
-            hs.forEach(h => {
+            hs.forEach(function(h) {
                 if (!h.lat || !h.lng) return;
-                const radius = Math.min(30, Math.max(10, h.total_adversary_passes / 3));
+                var radius = Math.min(30, Math.max(10, h.total_adversary_passes / 3));
                 L.circle([h.lat, h.lng], {
-                    radius: radius * 10000,
-                    fillColor: '#FF2020',
-                    fillOpacity: 0.15,
-                    color: '#FF2020',
-                    weight: 1,
-                    opacity: 0.4,
+                    radius: radius * 10000, fillColor: '#FF2020', fillOpacity: 0.15,
+                    color: '#FF2020', weight: 1, opacity: 0.4,
                 }).addTo(hmap);
 
                 L.circleMarker([h.lat, h.lng], {
-                    radius: 6,
-                    fillColor: '#FF2020',
-                    fillOpacity: 0.8,
-                    color: '#fff',
-                    weight: 1,
-                    opacity: 0.5,
+                    radius: 6, fillColor: '#FF2020', fillOpacity: 0.8,
+                    color: '#fff', weight: 1, opacity: 0.5,
                 }).bindPopup(satPopup(h.name, '#FF2020', [
-                    `ADVERSARY PASSES: <span style="color:var(--red)">${h.total_adversary_passes}</span>`,
-                    h.passes_by_country ? Object.entries(h.passes_by_country).map(([c, n]) => `${c}: ${n}`).join(' | ') : '',
+                    'ADVERSARY PASSES: <span style="color:var(--red)">' + h.total_adversary_passes + '</span>',
+                    h.passes_by_country ? Object.entries(h.passes_by_country).map(function(e) { return e[0] + ': ' + e[1]; }).join(' | ') : '',
                 ]), { className: 'sat-popup', closeButton: false }).addTo(hmap);
 
-                // Plot top threats around hotspot
-                (h.top_threats || []).slice(0, 5).forEach(t => {
+                (h.top_threats || []).slice(0, 5).forEach(function(t) {
                     if (!t.lat || !t.lng) return;
                     L.circleMarker([t.lat, t.lng], {
-                        radius: 3,
-                        fillColor: countryColor(t.country),
-                        fillOpacity: 0.7,
-                        color: countryColor(t.country),
-                        weight: 0.5,
+                        radius: 3, fillColor: countryColor(t.country), fillOpacity: 0.7,
+                        color: countryColor(t.country), weight: 0.5,
                     }).addTo(hmap);
                 });
             });
@@ -1683,200 +1791,180 @@ Pages.strategy = async function (el) {
 Pages.overmatch = async function (el) {
     el.innerHTML = '<div class="loading">CALCULATING OVERMATCH SCORES</div>';
 
-    let overmatch = null;
-    let summary = null;
-    let hotspots = null;
+    var overmatch = null;
+    var summary = null;
+    var hotspots = null;
 
     try {
-        [overmatch, summary, hotspots] = await Promise.all([
+        var results = await Promise.all([
             api('/api/overmatch'),
             api('/api/overmatch/summary'),
             api('/api/intel/hotspots'),
         ]);
+        overmatch = results[0];
+        summary = results[1];
+        hotspots = results[2];
     } catch (e) {
         // Endpoints may not exist yet
     }
 
-    const zones = (overmatch && overmatch.zones) ? overmatch.zones : null;
-    const hs = (hotspots && hotspots.hotspots) || [];
-    const domains = ['ISR', 'COMMS', 'PNT', 'SDA', 'ASAT', 'EW'];
-    const mapH = Math.max(380, window.innerHeight * 0.4);
+    var zones = (overmatch && overmatch.zones) ? overmatch.zones : null;
+    var hs = (hotspots && hotspots.hotspots) || [];
+    var domains = ['ISR', 'COMMS', 'PNT', 'SDA', 'ASAT', 'EW'];
+    var mapH = Math.max(380, window.innerHeight * 0.4);
 
     if (!zones) {
-        // Fallback: show calculating placeholder with hotspot data
-        el.innerHTML = `
-            <div class="page-wrap">
-                <div class="strategy-banner" style="border-bottom-color:var(--amber)">
-                    <div class="strategy-title">FVEY DOMAIN OVERMATCH ASSESSMENT</div>
-                    <div class="strategy-subtitle">UNCLASSIFIED // ${new Date().toISOString().substring(0, 10)} // ${zulu()}</div>
-                    <div class="strategy-threat-display">
-                        <div class="strategy-threat-level elevated" style="animation:blink-text 1.5s step-end infinite">CALCULATING</div>
-                    </div>
-                    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">OVERMATCH ENGINE INITIALIZING -- COLLECTING DOMAIN SCORES</div>
-                </div>
+        var fallbackZonesHtml = '';
+        hs.slice(0, 6).forEach(function(h) {
+            fallbackZonesHtml += '<div class="overmatch-zone-card">' +
+                '<div class="overmatch-zone-header">' +
+                    '<span class="overmatch-zone-name">' + h.name + '</span>' +
+                    '<span style="font-size:9px;color:var(--red)">' + h.total_adversary_passes + ' PASSES</span>' +
+                '</div>' +
+                '<div class="overmatch-zone-body">' +
+                    '<div style="text-align:center;padding:10px 0;font-size:10px;color:var(--text-muted);letter-spacing:1px">OVERMATCH DATA PENDING</div>' +
+                    domains.map(function(d) { return buildOvermatchBar(d, 0); }).join('') +
+                '</div></div>';
+        });
 
-                ${hs.length ? `
-                <div class="section-head">CONTESTED ZONES IDENTIFIED</div>
-                <div class="grid-3 mb-4">
-                    ${hs.slice(0, 6).map(h => `
-                        <div class="overmatch-zone-card">
-                            <div class="overmatch-zone-header">
-                                <span class="overmatch-zone-name">${h.name}</span>
-                                <span style="font-size:9px;color:var(--red)">${h.total_adversary_passes} PASSES</span>
-                            </div>
-                            <div class="overmatch-zone-body">
-                                <div style="text-align:center;padding:10px 0;font-size:10px;color:var(--text-muted);letter-spacing:1px">OVERMATCH DATA PENDING</div>
-                                ${domains.map(d => buildOvermatchBar(d, 0)).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                ` : ''}
-
-                <div class="panel">
-                    <div class="panel-head"><h3>DOMAIN ANALYSIS PENDING</h3><span class="ph-meta">${livePulse('CALCULATING', 'amber')}</span></div>
-                    <div class="panel-body" style="text-align:center;padding:30px">
-                        <div style="font-size:11px;color:var(--amber);letter-spacing:2px;margin-bottom:8px">OVERMATCH ENGINE LOADING</div>
-                        <div style="font-size:9px;color:var(--text-dim)">The overmatch calculation engine processes ISR, COMMS, PNT, SDA, ASAT, and EW domain data across all 6 contested zones. Refresh when backend is available.</div>
-                    </div>
-                </div>
-            </div>
-        `;
+        el.innerHTML = '<div class="page-wrap">' +
+            '<div class="strategy-banner" style="border-bottom-color:var(--amber)">' +
+                '<div class="strategy-title">FVEY DOMAIN OVERMATCH ASSESSMENT</div>' +
+                '<div class="strategy-subtitle">UNCLASSIFIED // ' + new Date().toISOString().substring(0, 10) + ' // ' + zulu() + '</div>' +
+                '<div class="strategy-threat-display"><div class="strategy-threat-level elevated" style="animation:blink-text 1.5s step-end infinite">CALCULATING</div></div>' +
+                '<div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">OVERMATCH ENGINE INITIALIZING -- COLLECTING DOMAIN SCORES</div>' +
+            '</div>' +
+            (hs.length ? '<div class="section-head">CONTESTED ZONES IDENTIFIED</div><div class="grid-3 mb-4">' + fallbackZonesHtml + '</div>' : '') +
+            '<div class="panel"><div class="panel-head"><h3>DOMAIN ANALYSIS PENDING</h3><span class="ph-meta">' + livePulse('CALCULATING', 'amber') + '</span></div>' +
+                '<div class="panel-body" style="text-align:center;padding:30px">' +
+                    '<div style="font-size:11px;color:var(--amber);letter-spacing:2px;margin-bottom:8px">OVERMATCH ENGINE LOADING</div>' +
+                    '<div style="font-size:9px;color:var(--text-dim)">The overmatch calculation engine processes ISR, COMMS, PNT, SDA, ASAT, and EW domain data across all 6 contested zones. Refresh when backend is available.</div>' +
+            '</div></div></div>';
         return;
     }
 
     // Full overmatch display
-    const globalScore = summary?.global_overmatch || summary?.overall_score || zones.reduce((a, z) => a + (z.overmatch_score || 0), 0) / zones.length;
-    const globalVerdict = overmatchVerdict(globalScore);
+    var globalScore = (summary && summary.global_overmatch) || (summary && summary.overall_score) || Math.round(zones.reduce(function(a, z) { return a + (z.overmatch_score || 0); }, 0) / zones.length);
+    var globalVerdict = overmatchVerdict(globalScore);
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="strategy-banner" style="border-bottom-color:${overmatchColor(globalScore)}">
-                <div class="strategy-title">FVEY DOMAIN OVERMATCH ASSESSMENT</div>
-                <div class="strategy-subtitle">UNCLASSIFIED // ${new Date().toISOString().substring(0, 10)} // ${zulu()} // ${zones.length} CONTESTED ZONES</div>
-                <div class="strategy-threat-display">
-                    <div class="strategy-threat-level" style="color:${overmatchColor(globalScore)};border-color:${overmatchColor(globalScore)};background:rgba(0,0,0,0.3)">${globalScore > 0 ? '+' : ''}${Math.round(globalScore)}</div>
-                </div>
-                <div style="margin-top:6px">
-                    <span class="overmatch-zone-verdict ${globalVerdict.cls}">${globalVerdict.text}</span>
-                </div>
-                <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:6px">SCALE: -100 (ADVERSARY DOMINANT) ... 0 (CONTESTED) ... +100 (FVEY DOMINANT)</div>
-            </div>
+    // Build zone cards
+    var zoneCardsHtml = '';
+    zones.forEach(function(z) {
+        var zScore = z.overmatch_score || 0;
+        var zVerdict = overmatchVerdict(zScore);
+        var dm = z.domains || {};
+        var domainBarsHtml = '';
+        var domainMiniHtml = '';
+        domains.forEach(function(d) {
+            domainBarsHtml += buildOvermatchBar(d, dm[d] || 0);
+            var dScore = dm[d] || 0;
+            domainMiniHtml += '<div class="domain-score-card">' +
+                '<div class="domain-score-label">' + d + '</div>' +
+                '<div class="domain-score-val" style="color:' + overmatchColor(dScore) + '">' + (dScore > 0 ? '+' : '') + dScore + '</div>' +
+                '</div>';
+        });
 
-            <!-- Global overmatch bar -->
-            <div class="overmatch-global-bar">
-                <div class="overmatch-global-score" style="color:${overmatchColor(globalScore)};text-shadow:0 0 15px ${overmatchColor(globalScore)}">${globalScore > 0 ? '+' : ''}${Math.round(globalScore)}</div>
-                <div class="overmatch-global-detail">
-                    <div class="overmatch-global-label">GLOBAL OVERMATCH SCORE</div>
-                    <div class="overmatch-global-verdict" style="color:${overmatchColor(globalScore)}">${globalVerdict.text}</div>
-                    ${summary?.key_finding ? `<div style="font-size:9px;color:var(--text);margin-top:4px;line-height:1.4">${summary.key_finding}</div>` : ''}
-                </div>
-                <div>${livePulse('LIVE', '')}</div>
-            </div>
+        zoneCardsHtml += '<div class="overmatch-zone-card">' +
+            '<div class="overmatch-zone-header">' +
+                '<span class="overmatch-zone-name">' + z.zone + '</span>' +
+                '<span class="overmatch-zone-score" style="color:' + overmatchColor(zScore) + '">' + (zScore > 0 ? '+' : '') + zScore + '</span>' +
+            '</div>' +
+            '<div class="overmatch-zone-body">' +
+                '<div style="margin-bottom:6px"><span class="overmatch-zone-verdict ' + zVerdict.cls + '">' + zVerdict.text + '</span>' +
+                (z.overall_overmatch ? '<span style="font-size:8px;color:var(--text-muted);margin-left:6px">' + z.overall_overmatch + '</span>' : '') +
+                '</div>' +
+                domainBarsHtml +
+                '<div class="domain-scores-grid">' + domainMiniHtml + '</div>' +
+            '</div></div>';
+    });
 
-            <!-- Overmatch map -->
-            <div class="panel mb-2">
-                <div class="panel-head"><h3>CONTESTED ZONES // OVERMATCH MAP</h3><span class="ph-meta">${zones.length} ZONES | ${zulu()}</span></div>
-                <div class="panel-body" style="padding:0"><div id="overmatch-map" class="map-container" style="height:${mapH}px;min-height:${mapH}px"></div></div>
-            </div>
+    // Build recommendations
+    var recsHtml = '';
+    if (summary && summary.recommendations && summary.recommendations.length) {
+        recsHtml = '<div class="panel mb-4"><div class="panel-head"><h3>OVERMATCH RECOMMENDATIONS</h3><span class="ph-meta">' + summary.recommendations.length + ' ITEMS</span></div><div class="panel-body">';
+        summary.recommendations.forEach(function(r, i) {
+            var title = typeof r === 'string' ? r : (r.title || r.description || '');
+            var detail = typeof r === 'object' && r.detail ? r.detail : '';
+            recsHtml += '<div class="threat-card severity-high" style="border-left-color:var(--cyan)">' +
+                '<div class="tc-header"><span style="color:var(--text-dim);font-size:9px">#' + (i + 1) + '</span> <span class="tc-title">' + title + '</span></div>' +
+                (detail ? '<div class="tc-body">' + detail + '</div>' : '') +
+                '</div>';
+        });
+        recsHtml += '</div></div>';
+    }
 
-            <!-- Zone cards -->
-            <div class="section-head">ZONE OVERMATCH BREAKDOWN // 6 DOMAINS</div>
-            <div class="grid-3 mb-4">
-                ${zones.map(z => {
-                    const zScore = z.overmatch_score || 0;
-                    const zVerdict = overmatchVerdict(zScore);
-                    const dm = z.domains || {};
-                    return `
-                    <div class="overmatch-zone-card">
-                        <div class="overmatch-zone-header">
-                            <span class="overmatch-zone-name">${z.zone}</span>
-                            <span class="overmatch-zone-score" style="color:${overmatchColor(zScore)}">${zScore > 0 ? '+' : ''}${zScore}</span>
-                        </div>
-                        <div class="overmatch-zone-body">
-                            <div style="margin-bottom:6px">
-                                <span class="overmatch-zone-verdict ${zVerdict.cls}">${zVerdict.text}</span>
-                                ${z.overall_overmatch ? `<span style="font-size:8px;color:var(--text-muted);margin-left:6px">${z.overall_overmatch}</span>` : ''}
-                            </div>
-                            ${domains.map(d => buildOvermatchBar(d, dm[d] || 0)).join('')}
-                            <div class="domain-scores-grid">
-                                ${domains.map(d => {
-                                    const dScore = dm[d] || 0;
-                                    return `<div class="domain-score-card">
-                                        <div class="domain-score-label">${d}</div>
-                                        <div class="domain-score-val" style="color:${overmatchColor(dScore)}">${dScore > 0 ? '+' : ''}${dScore}</div>
-                                    </div>`;
-                                }).join('')}
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('')}
-            </div>
-
-            <!-- Key findings & recommendations -->
-            ${summary?.recommendations?.length ? `
-            <div class="panel mb-4">
-                <div class="panel-head"><h3>OVERMATCH RECOMMENDATIONS</h3><span class="ph-meta">${summary.recommendations.length} ITEMS</span></div>
-                <div class="panel-body">
-                    ${summary.recommendations.map((r, i) => `
-                        <div class="threat-card severity-high" style="border-left-color:var(--cyan)">
-                            <div class="tc-header">
-                                <span style="color:var(--text-dim);font-size:9px">#${i + 1}</span>
-                                <span class="tc-title">${typeof r === 'string' ? r : r.title || r.description || ''}</span>
-                            </div>
-                            ${typeof r === 'object' && r.detail ? `<div class="tc-body">${r.detail}</div>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            ` : ''}
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="strategy-banner" style="border-bottom-color:' + overmatchColor(globalScore) + '">' +
+            '<div class="strategy-title">FVEY DOMAIN OVERMATCH ASSESSMENT</div>' +
+            '<div class="strategy-subtitle">UNCLASSIFIED // ' + new Date().toISOString().substring(0, 10) + ' // ' + zulu() + ' // ' + zones.length + ' CONTESTED ZONES</div>' +
+            '<div class="strategy-threat-display">' +
+                '<div class="strategy-threat-level" style="color:' + overmatchColor(globalScore) + ';border-color:' + overmatchColor(globalScore) + ';background:rgba(0,0,0,0.3)">' + (globalScore > 0 ? '+' : '') + Math.round(globalScore) + '</div>' +
+            '</div>' +
+            '<div style="margin-top:6px"><span class="overmatch-zone-verdict ' + globalVerdict.cls + '">' + globalVerdict.text + '</span></div>' +
+            '<div style="font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:6px">SCALE: -100 (ADVERSARY DOMINANT) ... 0 (CONTESTED) ... +100 (FVEY DOMINANT)</div>' +
+        '</div>' +
+        '<div class="overmatch-global-bar">' +
+            '<div class="overmatch-global-score" style="color:' + overmatchColor(globalScore) + ';text-shadow:0 0 15px ' + overmatchColor(globalScore) + '">' + (globalScore > 0 ? '+' : '') + Math.round(globalScore) + '</div>' +
+            '<div class="overmatch-global-detail">' +
+                '<div class="overmatch-global-label">GLOBAL OVERMATCH SCORE</div>' +
+                '<div class="overmatch-global-verdict" style="color:' + overmatchColor(globalScore) + '">' + globalVerdict.text + '</div>' +
+                (summary && summary.key_finding ? '<div style="font-size:9px;color:var(--text);margin-top:4px;line-height:1.4">' + summary.key_finding + '</div>' : '') +
+            '</div>' +
+            '<div>' + livePulse('LIVE', '') + '</div>' +
+        '</div>' +
+        '<div class="panel mb-2"><div class="panel-head"><h3>CONTESTED ZONES // OVERMATCH MAP</h3><span class="ph-meta">' + zones.length + ' ZONES | ' + zulu() + '</span></div>' +
+            '<div class="panel-body" style="padding:0"><div id="overmatch-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div></div>' +
+        '<div class="section-head">ZONE OVERMATCH BREAKDOWN // 6 DOMAINS</div>' +
+        '<div class="grid-3 mb-4">' + zoneCardsHtml + '</div>' +
+        recsHtml +
+        '</div>';
 
     // Overmatch map
-    setTimeout(() => {
-        const mapEl = document.getElementById('overmatch-map');
+    setTimeout(function() {
+        var mapEl = document.getElementById('overmatch-map');
         if (!mapEl) return;
         mapEl.style.height = mapH + 'px';
-        const omap = makeMap('overmatch-map', [25, 60], 3);
+        var omap = makeMap('overmatch-map', [25, 60], 3);
         if (!omap) return;
         storeMap(omap);
 
-        // Plot zones from both overmatch data and hotspots
-        zones.forEach(z => {
-            // Try to find matching hotspot for lat/lng
-            const matchHS = hs.find(h => h.name && z.zone && (h.name.toLowerCase().includes(z.zone.split(' ')[0].toLowerCase()) || z.zone.toLowerCase().includes(h.name.split(' ')[0].toLowerCase())));
-            const lat = matchHS?.lat || 0;
-            const lng = matchHS?.lng || 0;
+        zones.forEach(function(z) {
+            var matchHS = null;
+            for (var i = 0; i < hs.length; i++) {
+                if (hs[i].name && z.zone) {
+                    var hsFirst = hs[i].name.split(' ')[0].toLowerCase();
+                    var zFirst = z.zone.split(' ')[0].toLowerCase();
+                    if (hs[i].name.toLowerCase().includes(zFirst) || z.zone.toLowerCase().includes(hsFirst)) {
+                        matchHS = hs[i];
+                        break;
+                    }
+                }
+            }
+            var lat = matchHS ? matchHS.lat : 0;
+            var lng = matchHS ? matchHS.lng : 0;
             if (!lat && !lng) return;
 
-            const zScore = z.overmatch_score || 0;
-            const col = overmatchColor(zScore);
-            const colHex = zScore > 20 ? '#20FF60' : zScore > -20 ? '#FFB000' : '#FF2020';
-            const radius = Math.max(15, Math.abs(zScore) / 2);
+            var zScore = z.overmatch_score || 0;
+            var col = overmatchColor(zScore);
+            var colHex = zScore > 20 ? '#20FF60' : zScore > -20 ? '#FFB000' : '#FF2020';
+            var radius = Math.max(15, Math.abs(zScore) / 2);
 
-            // Zone circle
             L.circle([lat, lng], {
-                radius: radius * 15000,
-                fillColor: colHex,
-                fillOpacity: 0.12,
-                color: colHex,
-                weight: 1.5,
-                opacity: 0.5,
+                radius: radius * 15000, fillColor: colHex, fillOpacity: 0.12,
+                color: colHex, weight: 1.5, opacity: 0.5,
             }).addTo(omap);
 
-            // Zone marker
+            var domainLabels = Object.entries(z.domains || {}).map(function(e) {
+                return e[0] + ': <span style="color:' + overmatchColor(e[1]) + '">' + (e[1] > 0 ? '+' : '') + e[1] + '</span>';
+            }).join(' | ');
+
             L.circleMarker([lat, lng], {
-                radius: 8,
-                fillColor: colHex,
-                fillOpacity: 0.9,
-                color: '#fff',
-                weight: 1,
-                opacity: 0.6,
+                radius: 8, fillColor: colHex, fillOpacity: 0.9,
+                color: '#fff', weight: 1, opacity: 0.6,
             }).bindPopup(satPopup(z.zone, colHex, [
-                `OVERMATCH: <span style="color:${col}">${zScore > 0 ? '+' : ''}${zScore}</span>`,
-                `${overmatchVerdict(zScore).text}`,
-                Object.entries(z.domains || {}).map(([d, v]) => `${d}: <span style="color:${overmatchColor(v)}">${v > 0 ? '+' : ''}${v}</span>`).join(' | '),
+                'OVERMATCH: <span style="color:' + col + '">' + (zScore > 0 ? '+' : '') + zScore + '</span>',
+                overmatchVerdict(zScore).text,
+                domainLabels,
             ]), { className: 'sat-popup', closeButton: false }).addTo(omap);
         });
     }, 200);
@@ -1890,131 +1978,102 @@ Pages.overmatch = async function (el) {
 Pages.wargame = async function (el) {
     el.innerHTML = '<div class="loading">LOADING WARGAME SCENARIOS</div>';
 
-    let scenarios = null;
-    let resilience = null;
-
+    var scenarios = null;
+    var resilience = null;
     try {
-        [scenarios, resilience] = await Promise.all([
+        var results = await Promise.all([
             api('/api/wargame/scenarios'),
             api('/api/wargame/resilience'),
         ]);
+        scenarios = results[0];
+        resilience = results[1];
     } catch (e) {
         // Endpoints may not exist yet
     }
 
-    const scenarioList = scenarios || [];
-    const hasScenarios = scenarioList.length > 0;
+    var scenarioList = scenarios || [];
+    var hasScenarios = scenarioList.length > 0;
 
     if (!hasScenarios) {
-        // Fallback: show placeholder with threat scenarios from existing API
-        const threatScenarios = await api('/api/threat/scenarios');
-        const ts = threatScenarios || [];
+        var threatScenarios = await api('/api/threat/scenarios');
+        var ts = threatScenarios || [];
+        var tsHtml = '';
+        ts.forEach(function(s, idx) {
+            var phaseHtml = '';
+            if (s.phases && s.phases.length) {
+                phaseHtml = '<div class="phase-flow" style="margin-top:6px">';
+                s.phases.forEach(function(p, pi) {
+                    phaseHtml += '<div class="phase-step"><div class="phase-step-num">PHASE ' + (pi + 1) + '</div>' + p + '</div>';
+                });
+                phaseHtml += '</div>';
+            }
+            tsHtml += '<div class="wargame-card">' +
+                '<div class="wargame-card-head">' + badge(s.severity || s.probability || 'high') +
+                    ' <span style="color:var(--white);font-size:11px;flex:1">' + (s.title || s.name) + '</span>' +
+                    (s.probability ? '<span style="font-size:8px;color:var(--text-muted)">P: ' + (s.probability || '').toUpperCase() + '</span>' : '') +
+                '</div>' +
+                '<div class="wargame-card-body"><div>' + (s.description || '') + '</div>' +
+                    phaseHtml +
+                    (s.fvey_response ? '<div style="margin-top:6px"><span class="intel-label" style="color:var(--green)">FVEY RESPONSE</span><div style="font-size:9px;color:var(--text);line-height:1.4;margin-top:2px">' + s.fvey_response + '</div></div>' : '') +
+                '</div></div>';
+        });
 
-        el.innerHTML = `
-            <div class="page-wrap">
-                <div class="strategy-banner" style="border-bottom-color:var(--red)">
-                    <div class="strategy-title">CONFLICT SIMULATION ENGINE</div>
-                    <div class="strategy-subtitle">UNCLASSIFIED // WARGAME MODULE // ${zulu()}</div>
-                    <div class="strategy-threat-display">
-                        <div class="strategy-threat-level elevated" style="animation:blink-text 1.5s step-end infinite">INITIALIZING</div>
-                    </div>
-                    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">WARGAME ENGINE LOADING -- ${ts.length} THREAT SCENARIOS AVAILABLE FOR SIMULATION</div>
-                </div>
-
-                ${ts.length ? `
-                <div class="section-head">AVAILABLE THREAT SCENARIOS</div>
-                ${ts.map((s, idx) => `
-                    <div class="wargame-card">
-                        <div class="wargame-card-head">
-                            ${badge(s.severity || s.probability || 'high')}
-                            <span style="color:var(--white);font-size:11px;flex:1">${s.title || s.name}</span>
-                            ${s.probability ? `<span style="font-size:8px;color:var(--text-muted)">P: ${(s.probability || '').toUpperCase()}</span>` : ''}
-                        </div>
-                        <div class="wargame-card-body">
-                            <div>${s.description || ''}</div>
-                            ${s.phases?.length ? `
-                                <div class="phase-flow" style="margin-top:6px">
-                                    ${s.phases.map((p, pi) => `<div class="phase-step"><div class="phase-step-num">PHASE ${pi + 1}</div>${p}</div>`).join('')}
-                                </div>
-                            ` : ''}
-                            ${s.fvey_response ? `<div style="margin-top:6px"><span class="intel-label" style="color:var(--green)">FVEY RESPONSE</span><div style="font-size:9px;color:var(--text);line-height:1.4;margin-top:2px">${s.fvey_response}</div></div>` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-                ` : '<div class="empty-state">NO SCENARIOS AVAILABLE</div>'}
-
-                ${resilience ? `
-                <div class="panel mt-4">
-                    <div class="panel-head"><h3>FVEY RECONSTITUTION ASSESSMENT</h3></div>
-                    <div class="panel-body">
-                        <div style="font-size:10px;color:var(--text);line-height:1.6">${typeof resilience === 'string' ? resilience : JSON.stringify(resilience, null, 2)}</div>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-        `;
+        el.innerHTML = '<div class="page-wrap">' +
+            '<div class="strategy-banner" style="border-bottom-color:var(--red)">' +
+                '<div class="strategy-title">CONFLICT SIMULATION ENGINE</div>' +
+                '<div class="strategy-subtitle">UNCLASSIFIED // WARGAME MODULE // ' + zulu() + '</div>' +
+                '<div class="strategy-threat-display"><div class="strategy-threat-level elevated" style="animation:blink-text 1.5s step-end infinite">INITIALIZING</div></div>' +
+                '<div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">WARGAME ENGINE LOADING -- ' + ts.length + ' THREAT SCENARIOS AVAILABLE FOR SIMULATION</div>' +
+            '</div>' +
+            (ts.length ? '<div class="section-head">AVAILABLE THREAT SCENARIOS</div>' + tsHtml : '<div class="empty-state">NO SCENARIOS AVAILABLE</div>') +
+            (resilience ? '<div class="panel" style="margin-top:4px"><div class="panel-head"><h3>FVEY RECONSTITUTION ASSESSMENT</h3></div>' +
+                '<div class="panel-body"><div style="font-size:10px;color:var(--text);line-height:1.6">' + (typeof resilience === 'string' ? resilience : JSON.stringify(resilience, null, 2)) + '</div></div></div>' : '') +
+            '</div>';
         return;
     }
 
     // Full wargame display with runnable scenarios
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="strategy-banner" style="border-bottom-color:var(--red)">
-                <div class="strategy-title">CONFLICT SIMULATION ENGINE</div>
-                <div class="strategy-subtitle">UNCLASSIFIED // WARGAME MODULE // ${zulu()}</div>
-                <div class="strategy-threat-display">
-                    <div class="strategy-threat-level critical">${scenarioList.length} SCENARIOS</div>
-                </div>
-                <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">SELECT A SCENARIO TO EXECUTE SIMULATION</div>
-            </div>
+    var scenListHtml = '';
+    scenarioList.forEach(function(s, i) {
+        scenListHtml += '<div class="wargame-card" data-idx="' + i + '" style="margin:0;border-left:0;border-right:0;' + (i > 0 ? 'border-top:0' : '') + '">' +
+            '<div class="wargame-card-head" style="padding:6px 10px">' +
+                badge(s.severity || 'high') +
+                ' <span style="color:var(--white);font-size:10px;flex:1">' + (s.title || s.name || 'Scenario ' + (i + 1)) + '</span>' +
+            '</div>' +
+            '<div style="padding:4px 10px 6px;font-size:9px;color:var(--text-dim)">' + (s.description || '').substring(0, 80) + '...</div>' +
+        '</div>';
+    });
 
-            <div style="display:grid;grid-template-columns:1fr 2fr;gap:2px">
-                <div class="panel">
-                    <div class="panel-head"><h3>SCENARIOS</h3><span class="ph-meta">${scenarioList.length}</span></div>
-                    <div class="panel-body" style="max-height:calc(100vh - 260px);padding:0" id="wg-scenario-list"></div>
-                </div>
-                <div id="wg-result-area">
-                    <div class="panel" style="height:100%">
-                        <div class="panel-head"><h3>SIMULATION RESULTS</h3></div>
-                        <div class="panel-body" style="text-align:center;padding:40px">
-                            <div style="font-size:11px;color:var(--text-dim);letter-spacing:2px">SELECT A SCENARIO TO BEGIN</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="strategy-banner" style="border-bottom-color:var(--red)">' +
+            '<div class="strategy-title">CONFLICT SIMULATION ENGINE</div>' +
+            '<div class="strategy-subtitle">UNCLASSIFIED // WARGAME MODULE // ' + zulu() + '</div>' +
+            '<div class="strategy-threat-display"><div class="strategy-threat-level critical">' + scenarioList.length + ' SCENARIOS</div></div>' +
+            '<div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">SELECT A SCENARIO TO EXECUTE SIMULATION</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 2fr;gap:2px">' +
+            '<div class="panel"><div class="panel-head"><h3>SCENARIOS</h3><span class="ph-meta">' + scenarioList.length + '</span></div>' +
+                '<div class="panel-body" style="max-height:calc(100vh - 260px);padding:0" id="wg-scenario-list">' + scenListHtml + '</div></div>' +
+            '<div id="wg-result-area"><div class="panel" style="height:100%"><div class="panel-head"><h3>SIMULATION RESULTS</h3></div>' +
+                '<div class="panel-body" style="text-align:center;padding:40px"><div style="font-size:11px;color:var(--text-dim);letter-spacing:2px">SELECT A SCENARIO TO BEGIN</div></div></div></div>' +
+        '</div>' +
+        (resilience ? '<div class="panel" style="margin-top:4px"><div class="panel-head"><h3>FVEY RECONSTITUTION & RESILIENCE ASSESSMENT</h3><span class="ph-meta">' + livePulse('', '') + '</span></div>' +
+            '<div class="panel-body" id="wg-resilience"></div></div>' : '') +
+        '</div>';
 
-            ${resilience ? `
-            <div class="panel" style="margin-top:4px">
-                <div class="panel-head"><h3>FVEY RECONSTITUTION & RESILIENCE ASSESSMENT</h3><span class="ph-meta">${livePulse('', '')}</span></div>
-                <div class="panel-body" id="wg-resilience"></div>
-            </div>
-            ` : ''}
-        </div>
-    `;
-
-    // Render scenario list
-    const listEl = document.getElementById('wg-scenario-list');
+    // Scenario click handlers
+    var listEl = document.getElementById('wg-scenario-list');
     if (listEl) {
-        listEl.innerHTML = scenarioList.map((s, i) => `
-            <div class="wargame-card" data-idx="${i}" style="margin:0;border-left:0;border-right:0;${i > 0 ? 'border-top:0' : ''}">
-                <div class="wargame-card-head" style="padding:6px 10px">
-                    ${badge(s.severity || 'high')}
-                    <span style="color:var(--white);font-size:10px;flex:1">${s.title || s.name || 'Scenario ' + (i + 1)}</span>
-                </div>
-                <div style="padding:4px 10px 6px;font-size:9px;color:var(--text-dim)">${(s.description || '').substring(0, 80)}...</div>
-            </div>
-        `).join('');
-
-        listEl.querySelectorAll('.wargame-card').forEach(card => {
-            card.addEventListener('click', async () => {
-                listEl.querySelectorAll('.wargame-card').forEach(c => c.classList.remove('active'));
+        listEl.querySelectorAll('.wargame-card').forEach(function(card) {
+            card.addEventListener('click', async function() {
+                listEl.querySelectorAll('.wargame-card').forEach(function(c) { c.classList.remove('active'); });
                 card.classList.add('active');
-                const idx = parseInt(card.dataset.idx);
-                const scenario = scenarioList[idx];
-                const resultArea = document.getElementById('wg-result-area');
+                var idx = parseInt(card.dataset.idx);
+                var scenario = scenarioList[idx];
+                var resultArea = document.getElementById('wg-result-area');
                 resultArea.innerHTML = '<div class="loading">EXECUTING SIMULATION</div>';
 
-                let result = null;
+                var result = null;
                 try {
                     result = await api('/api/wargame/run/' + (scenario.id || idx));
                 } catch (e) {
@@ -2022,66 +2081,72 @@ Pages.wargame = async function (el) {
                 }
 
                 if (!result) {
-                    resultArea.innerHTML = `
-                        <div class="wargame-result-panel">
-                            <div class="wargame-result-head">
-                                <h3 style="font-size:10px;letter-spacing:1.5px;color:var(--amber)">${scenario.title || scenario.name}</h3>
-                                <span>${badge(scenario.severity || 'high')}</span>
-                            </div>
-                            <div class="wargame-result-body">
-                                <div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">${scenario.description || ''}</div>
-                                ${scenario.phases?.length ? `
-                                    <div class="phase-flow">
-                                        ${scenario.phases.map((p, pi) => `<div class="phase-step"><div class="phase-step-num">PHASE ${pi + 1}</div>${p}</div>`).join('')}
-                                    </div>
-                                ` : ''}
-                                <div style="text-align:center;padding:16px;color:var(--amber);font-size:10px;letter-spacing:1px">DETAILED SIMULATION RESULTS PENDING ENGINE INITIALIZATION</div>
-                            </div>
-                        </div>`;
+                    var fallbackPhasesHtml = '';
+                    if (scenario.phases && scenario.phases.length) {
+                        fallbackPhasesHtml = '<div class="phase-flow">';
+                        scenario.phases.forEach(function(p, pi) {
+                            fallbackPhasesHtml += '<div class="phase-step"><div class="phase-step-num">PHASE ' + (pi + 1) + '</div>' + p + '</div>';
+                        });
+                        fallbackPhasesHtml += '</div>';
+                    }
+                    resultArea.innerHTML = '<div class="wargame-result-panel">' +
+                        '<div class="wargame-result-head"><h3 style="font-size:10px;letter-spacing:1.5px;color:var(--amber)">' + (scenario.title || scenario.name) + '</h3><span>' + badge(scenario.severity || 'high') + '</span></div>' +
+                        '<div class="wargame-result-body">' +
+                            '<div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">' + (scenario.description || '') + '</div>' +
+                            fallbackPhasesHtml +
+                            '<div style="text-align:center;padding:16px;color:var(--amber);font-size:10px;letter-spacing:1px">DETAILED SIMULATION RESULTS PENDING ENGINE INITIALIZATION</div>' +
+                        '</div></div>';
                     return;
                 }
 
                 // Render full result
-                resultArea.innerHTML = `
-                    <div class="wargame-result-panel">
-                        <div class="wargame-result-head">
-                            <h3 style="font-size:10px;letter-spacing:1.5px;color:var(--amber)">${result.title || scenario.title || 'SIMULATION RESULT'}</h3>
-                            <span>${badge(result.severity || scenario.severity || 'high')} ${livePulse('COMPLETE', '')}</span>
-                        </div>
-                        <div class="wargame-result-body" style="max-height:calc(100vh - 320px);overflow-y:auto">
-                            ${result.description ? `<div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">${result.description}</div>` : ''}
-                            ${result.engagement_capacity ? `<div class="wargame-stat-row"><span class="wargame-stat-label">ENGAGEMENT CAPACITY</span><span class="wargame-stat-val">${typeof result.engagement_capacity === 'object' ? JSON.stringify(result.engagement_capacity) : result.engagement_capacity}</span></div>` : ''}
-                            ${result.impact_assessment ? `<div class="wargame-stat-row"><span class="wargame-stat-label">IMPACT ASSESSMENT</span><span class="wargame-stat-val" style="color:var(--red)">${typeof result.impact_assessment === 'object' ? JSON.stringify(result.impact_assessment) : result.impact_assessment}</span></div>` : ''}
-                            ${result.debris_consequences ? `<div class="wargame-stat-row"><span class="wargame-stat-label">DEBRIS CONSEQUENCES</span><span class="wargame-stat-val">${typeof result.debris_consequences === 'object' ? JSON.stringify(result.debris_consequences) : result.debris_consequences}</span></div>` : ''}
-                            ${result.fvey_response_options ? `<div class="wargame-stat-row"><span class="wargame-stat-label">FVEY RESPONSE</span><span class="wargame-stat-val" style="color:var(--green)">${typeof result.fvey_response_options === 'object' ? (Array.isArray(result.fvey_response_options) ? result.fvey_response_options.join('; ') : JSON.stringify(result.fvey_response_options)) : result.fvey_response_options}</span></div>` : ''}
-                            ${result.reconstitution_timeline ? `<div class="wargame-stat-row"><span class="wargame-stat-label">RECONSTITUTION</span><span class="wargame-stat-val" style="color:var(--cyan)">${typeof result.reconstitution_timeline === 'object' ? JSON.stringify(result.reconstitution_timeline) : result.reconstitution_timeline}</span></div>` : ''}
-                            ${result.phases?.length ? `
-                                <div style="margin-top:8px"><span class="intel-label">ESCALATION PHASES</span>
-                                <div class="phase-flow" style="margin-top:4px">
-                                    ${result.phases.map((p, pi) => `<div class="phase-step"><div class="phase-step-num">PHASE ${pi + 1}</div>${typeof p === 'object' ? (p.description || p.name || JSON.stringify(p)) : p}</div>`).join('')}
-                                </div></div>
-                            ` : ''}
-                            ${result.outcome ? `<div style="margin-top:8px;padding:8px;background:rgba(255,176,0,0.03);border:1px solid var(--border)"><span class="intel-label">OUTCOME</span><div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:3px">${typeof result.outcome === 'object' ? JSON.stringify(result.outcome) : result.outcome}</div></div>` : ''}
-                        </div>
-                    </div>`;
+                var resultPhasesHtml = '';
+                if (result.phases && result.phases.length) {
+                    resultPhasesHtml = '<div style="margin-top:8px"><span class="intel-label">ESCALATION PHASES</span><div class="phase-flow" style="margin-top:4px">';
+                    result.phases.forEach(function(p, pi) {
+                        var phaseText = typeof p === 'object' ? (p.description || p.name || JSON.stringify(p)) : p;
+                        resultPhasesHtml += '<div class="phase-step"><div class="phase-step-num">PHASE ' + (pi + 1) + '</div>' + phaseText + '</div>';
+                    });
+                    resultPhasesHtml += '</div></div>';
+                }
+
+                function formatVal(v) {
+                    if (typeof v === 'object') return Array.isArray(v) ? v.join('; ') : JSON.stringify(v);
+                    return v;
+                }
+
+                resultArea.innerHTML = '<div class="wargame-result-panel">' +
+                    '<div class="wargame-result-head"><h3 style="font-size:10px;letter-spacing:1.5px;color:var(--amber)">' + (result.title || scenario.title || 'SIMULATION RESULT') + '</h3>' +
+                        '<span>' + badge(result.severity || scenario.severity || 'high') + ' ' + livePulse('COMPLETE', '') + '</span></div>' +
+                    '<div class="wargame-result-body" style="max-height:calc(100vh - 320px);overflow-y:auto">' +
+                        (result.description ? '<div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">' + result.description + '</div>' : '') +
+                        (result.engagement_capacity ? '<div class="wargame-stat-row"><span class="wargame-stat-label">ENGAGEMENT CAPACITY</span><span class="wargame-stat-val">' + formatVal(result.engagement_capacity) + '</span></div>' : '') +
+                        (result.impact_assessment ? '<div class="wargame-stat-row"><span class="wargame-stat-label">IMPACT ASSESSMENT</span><span class="wargame-stat-val" style="color:var(--red)">' + formatVal(result.impact_assessment) + '</span></div>' : '') +
+                        (result.debris_consequences ? '<div class="wargame-stat-row"><span class="wargame-stat-label">DEBRIS CONSEQUENCES</span><span class="wargame-stat-val">' + formatVal(result.debris_consequences) + '</span></div>' : '') +
+                        (result.fvey_response_options ? '<div class="wargame-stat-row"><span class="wargame-stat-label">FVEY RESPONSE</span><span class="wargame-stat-val" style="color:var(--green)">' + formatVal(result.fvey_response_options) + '</span></div>' : '') +
+                        (result.reconstitution_timeline ? '<div class="wargame-stat-row"><span class="wargame-stat-label">RECONSTITUTION</span><span class="wargame-stat-val" style="color:var(--cyan)">' + formatVal(result.reconstitution_timeline) + '</span></div>' : '') +
+                        resultPhasesHtml +
+                        (result.outcome ? '<div style="margin-top:8px;padding:8px;background:rgba(255,176,0,0.03);border:1px solid var(--border)"><span class="intel-label">OUTCOME</span><div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:3px">' + formatVal(result.outcome) + '</div></div>' : '') +
+                    '</div></div>';
             });
         });
     }
 
     // Render resilience
     if (resilience) {
-        const resEl = document.getElementById('wg-resilience');
+        var resEl = document.getElementById('wg-resilience');
         if (resEl) {
             if (typeof resilience === 'object') {
-                const fields = Object.entries(resilience);
-                resEl.innerHTML = fields.map(([k, v]) => `
-                    <div class="wargame-stat-row">
-                        <span class="wargame-stat-label">${k.replace(/_/g, ' ').toUpperCase()}</span>
-                        <span class="wargame-stat-val">${typeof v === 'object' ? JSON.stringify(v) : v}</span>
-                    </div>
-                `).join('');
+                var resHtml = '';
+                Object.entries(resilience).forEach(function(entry) {
+                    resHtml += '<div class="wargame-stat-row">' +
+                        '<span class="wargame-stat-label">' + entry[0].replace(/_/g, ' ').toUpperCase() + '</span>' +
+                        '<span class="wargame-stat-val">' + (typeof entry[1] === 'object' ? JSON.stringify(entry[1]) : entry[1]) + '</span>' +
+                        '</div>';
+                });
+                resEl.innerHTML = resHtml;
             } else {
-                resEl.innerHTML = `<div style="font-size:10px;color:var(--text);line-height:1.6">${resilience}</div>`;
+                resEl.innerHTML = '<div style="font-size:10px;color:var(--text);line-height:1.6">' + resilience + '</div>';
             }
         }
     }
@@ -2090,133 +2155,111 @@ Pages.wargame = async function (el) {
 
 /* ================================================================
    PAGE 11: INCIDENTS
-   Historical timeline of 17 space security incidents
+   Historical timeline of space security incidents
    ================================================================ */
 Pages.incidents = async function (el) {
     el.innerHTML = '<div class="loading">LOADING INCIDENT DATABASE</div>';
 
-    const [incidents, incStats] = await Promise.all([
+    var results = await Promise.all([
         api('/api/incidents'),
         api('/api/incidents/stats'),
     ]);
 
-    const all = incidents || [];
+    var all = results[0] || [];
+    var incStats = results[1] || {};
     if (!all.length) { el.innerHTML = '<div class="empty-state">INCIDENT DATA UNAVAILABLE</div>'; return; }
 
-    // Build stat arrays
-    const stats = incStats || {};
-    const byType = stats.by_type || {};
-    const byActor = stats.by_actor || {};
-    const bySeverity = stats.by_severity || {};
+    var byType = incStats.by_type || {};
+    var byActor = incStats.by_actor || {};
+    var bySeverity = incStats.by_severity || {};
 
-    // Unique filter values
-    const types = [...new Set(all.map(i => i.type).filter(Boolean))];
-    const actors = [...new Set(all.map(i => i.actor).filter(Boolean))];
-    const years = [...new Set(all.map(i => {
-        if (i.date) return new Date(i.date).getFullYear();
-        if (i.year) return i.year;
-        return null;
-    }).filter(Boolean))].sort((a, b) => b - a);
+    var types = [];
+    var actors = [];
+    var typeSet = {};
+    var actorSet = {};
+    all.forEach(function(inc) {
+        if (inc.type && !typeSet[inc.type]) { types.push(inc.type); typeSet[inc.type] = true; }
+        if (inc.actor && !actorSet[inc.actor]) { actors.push(inc.actor); actorSet[inc.actor] = true; }
+    });
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="strategy-banner" style="border-bottom-color:var(--cis)">
-                <div class="strategy-title">SPACE SECURITY INCIDENT DATABASE</div>
-                <div class="strategy-subtitle">UNCLASSIFIED // ${all.length} DOCUMENTED INCIDENTS // OSINT COMPILATION</div>
-            </div>
+    // Build stats cards
+    var statsCardsHtml = '<div class="incident-stat-card" style="border-left:2px solid var(--red)">' +
+        '<div class="incident-stat-val" style="color:var(--red)">' + all.length + '</div>' +
+        '<div class="incident-stat-label">TOTAL INCIDENTS</div></div>';
+    Object.entries(bySeverity).slice(0, 4).forEach(function(entry) {
+        statsCardsHtml += '<div class="incident-stat-card"><div class="incident-stat-val">' + entry[1] + '</div><div class="incident-stat-label">' + entry[0].toUpperCase() + '</div></div>';
+    });
+    Object.entries(byActor).slice(0, 3).forEach(function(entry) {
+        statsCardsHtml += '<div class="incident-stat-card"><div class="incident-stat-val">' + entry[1] + '</div><div class="incident-stat-label">' + entry[0].toUpperCase() + '</div></div>';
+    });
 
-            <!-- Stats summary -->
-            <div class="incident-stats-grid">
-                <div class="incident-stat-card" style="border-left:2px solid var(--red)">
-                    <div class="incident-stat-val" style="color:var(--red)">${all.length}</div>
-                    <div class="incident-stat-label">TOTAL INCIDENTS</div>
-                </div>
-                ${Object.entries(bySeverity).slice(0, 4).map(([sev, count]) => `
-                    <div class="incident-stat-card">
-                        <div class="incident-stat-val">${count}</div>
-                        <div class="incident-stat-label">${sev.toUpperCase()}</div>
-                    </div>
-                `).join('')}
-                ${Object.entries(byActor).slice(0, 3).map(([actor, count]) => `
-                    <div class="incident-stat-card">
-                        <div class="incident-stat-val">${count}</div>
-                        <div class="incident-stat-label">${actor.toUpperCase()}</div>
-                    </div>
-                `).join('')}
-            </div>
+    // Build type distribution
+    var typeDistHtml = '';
+    var typeColors = ['#FF2020', '#FF8C00', '#FFD700', '#C040FF', '#2080FF', '#20FF60', '#00D4FF'];
+    var tIdx = 0;
+    Object.entries(byType).sort(function(a, b) { return b[1] - a[1]; }).forEach(function(entry) {
+        typeDistHtml += '<div class="cat-breakdown"><span class="cat-label">' + entry[0].replace(/-/g, ' ').toUpperCase() + '</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + (entry[1] / all.length * 100) + '%;background:' + typeColors[tIdx % typeColors.length] + '"></div></div><span class="cat-count">' + entry[1] + '</span></div>';
+        tIdx++;
+    });
 
-            <!-- Distribution bars -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:4px">
-                <div class="panel">
-                    <div class="panel-head"><h3>BY TYPE</h3></div>
-                    <div class="panel-body">
-                        ${Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([t, count], i) => {
-                            const colors = ['#FF2020', '#FF8C00', '#FFD700', '#C040FF', '#2080FF', '#20FF60', '#00D4FF'];
-                            return `<div class="cat-breakdown"><span class="cat-label">${t.replace(/-/g, ' ').toUpperCase()}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${count / all.length * 100}%;background:${colors[i % colors.length]}"></div></div><span class="cat-count">${count}</span></div>`;
-                        }).join('')}
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-head"><h3>BY ACTOR</h3></div>
-                    <div class="panel-body">
-                        ${Object.entries(byActor).sort((a, b) => b[1] - a[1]).map(([a, count]) => {
-                            const actorMap = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
-                            const col = actorMap[a] || '#FFB000';
-                            return `<div class="cat-breakdown"><span class="cat-label" style="color:${col}">${a}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${count / all.length * 100}%;background:${col}"></div></div><span class="cat-count">${count}</span></div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            </div>
+    // Build actor distribution
+    var actorDistHtml = '';
+    var actorColorMap = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
+    Object.entries(byActor).sort(function(a, b) { return b[1] - a[1]; }).forEach(function(entry) {
+        var col = actorColorMap[entry[0]] || '#FFB000';
+        actorDistHtml += '<div class="cat-breakdown"><span class="cat-label" style="color:' + col + '">' + entry[0] + '</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:' + (entry[1] / all.length * 100) + '%;background:' + col + '"></div></div><span class="cat-count">' + entry[1] + '</span></div>';
+    });
 
-            <!-- Filters -->
-            <div class="filter-tabs" id="incident-filters">
-                <div class="filter-tab active" data-filter="all">ALL (${all.length})</div>
-                ${types.slice(0, 5).map(t => `<div class="filter-tab" data-filter="type:${t}">${t.replace(/-/g, ' ').toUpperCase()}</div>`).join('')}
-                ${actors.slice(0, 4).map(a => `<div class="filter-tab" data-filter="actor:${a}">${a.toUpperCase()}</div>`).join('')}
-            </div>
+    // Build filter tabs
+    var filterTabsHtml = '<div class="filter-tab active" data-filter="all">ALL (' + all.length + ')</div>';
+    types.slice(0, 5).forEach(function(t) {
+        filterTabsHtml += '<div class="filter-tab" data-filter="type:' + t + '">' + t.replace(/-/g, ' ').toUpperCase() + '</div>';
+    });
+    actors.slice(0, 4).forEach(function(a) {
+        filterTabsHtml += '<div class="filter-tab" data-filter="actor:' + a + '">' + a.toUpperCase() + '</div>';
+    });
 
-            <!-- Timeline -->
-            <div class="panel">
-                <div class="panel-head"><h3>INCIDENT TIMELINE</h3><span class="ph-meta">${livePulse('', '')} ${all.length} EVENTS</span></div>
-                <div class="panel-body" style="max-height:calc(100vh - 460px)" id="incident-timeline-wrap"></div>
-            </div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="strategy-banner" style="border-bottom-color:var(--cis)">' +
+            '<div class="strategy-title">SPACE SECURITY INCIDENT DATABASE</div>' +
+            '<div class="strategy-subtitle">UNCLASSIFIED // ' + all.length + ' DOCUMENTED INCIDENTS // OSINT COMPILATION</div>' +
+        '</div>' +
+        '<div class="incident-stats-grid">' + statsCardsHtml + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:4px">' +
+            '<div class="panel"><div class="panel-head"><h3>BY TYPE</h3></div><div class="panel-body">' + typeDistHtml + '</div></div>' +
+            '<div class="panel"><div class="panel-head"><h3>BY ACTOR</h3></div><div class="panel-body">' + actorDistHtml + '</div></div>' +
+        '</div>' +
+        '<div class="filter-tabs" id="incident-filters">' + filterTabsHtml + '</div>' +
+        '<div class="panel"><div class="panel-head"><h3>INCIDENT TIMELINE</h3><span class="ph-meta">' + livePulse('', '') + ' ' + all.length + ' EVENTS</span></div>' +
+            '<div class="panel-body" style="max-height:calc(100vh - 460px)" id="incident-timeline-wrap"></div></div>' +
+        '</div>';
 
     function renderTimeline(filter) {
-        let filtered = all;
+        var filtered = all;
         if (filter && filter !== 'all') {
-            if (filter.startsWith('type:')) {
-                const t = filter.replace('type:', '');
-                filtered = all.filter(i => i.type === t);
-            } else if (filter.startsWith('actor:')) {
-                const a = filter.replace('actor:', '');
-                filtered = all.filter(i => i.actor === a);
-            } else if (filter.startsWith('year:')) {
-                const y = parseInt(filter.replace('year:', ''));
-                filtered = all.filter(i => {
-                    const iYear = i.date ? new Date(i.date).getFullYear() : i.year;
-                    return iYear === y;
-                });
+            if (filter.indexOf('type:') === 0) {
+                var t = filter.replace('type:', '');
+                filtered = all.filter(function(i) { return i.type === t; });
+            } else if (filter.indexOf('actor:') === 0) {
+                var a = filter.replace('actor:', '');
+                filtered = all.filter(function(i) { return i.actor === a; });
             }
         }
 
-        // Sort by date descending
-        filtered.sort((a, b) => {
-            const dateA = a.date ? new Date(a.date).getTime() : (a.year ? new Date(a.year + '-01-01').getTime() : 0);
-            const dateB = b.date ? new Date(b.date).getTime() : (b.year ? new Date(b.year + '-01-01').getTime() : 0);
+        filtered.sort(function(a, b) {
+            var dateA = a.date ? new Date(a.date).getTime() : (a.year ? new Date(a.year + '-01-01').getTime() : 0);
+            var dateB = b.date ? new Date(b.date).getTime() : (b.year ? new Date(b.year + '-01-01').getTime() : 0);
             return dateB - dateA;
         });
 
-        const timelineEl = document.getElementById('incident-timeline-wrap');
+        var timelineEl = document.getElementById('incident-timeline-wrap');
         if (!timelineEl) return;
 
-        var actorColors = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
         var html = '<div class="incident-timeline">';
         filtered.forEach(function(inc) {
             var date = inc.date ? new Date(inc.date).toISOString().substring(0, 10) : (inc.year ? inc.year + '' : '?');
             var sev = (inc.severity || 'medium').toLowerCase();
-            var col = actorColors[inc.actor] || '#FFB000';
+            var col = actorColorMap[inc.actor] || '#FFB000';
             html += '<div class="incident-item">';
             html += '<div class="incident-date">' + date + '</div>';
             html += '<div class="incident-dot ' + sev + '"></div>';
@@ -2228,9 +2271,9 @@ Pages.incidents = async function (el) {
             html += '</div>';
             html += '<div class="incident-body">' + (inc.description || '') + '</div>';
             html += '<div class="incident-meta">';
-            if (inc.impact) html += '<span>IMPACT: <span style="color:var(--red)">' + inc.impact + '</span></span> ';
-            if (inc.orbit_affected) html += '<span>ORBIT: ' + inc.orbit_affected + '</span> ';
-            if (inc.debris_generated) html += '<span>DEBRIS: <span style="color:var(--cis)">' + inc.debris_generated + '</span></span> ';
+            if (inc.impact) html += '<span>IMPACT: <span style="color:var(--red)">' + inc.impact + '</span></span>';
+            if (inc.orbit_affected) html += '<span>ORBIT: ' + inc.orbit_affected + '</span>';
+            if (inc.debris_generated) html += '<span>DEBRIS: <span style="color:var(--cis)">' + inc.debris_generated + '</span></span>';
             if (inc.source) html += '<span style="color:var(--text-muted)">SRC: ' + inc.source + '</span>';
             html += '</div></div>';
         });
@@ -2239,10 +2282,9 @@ Pages.incidents = async function (el) {
     }
 
     renderTimeline('all');
-
-    el.querySelectorAll('#incident-filters .filter-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            el.querySelectorAll('#incident-filters .filter-tab').forEach(t => t.classList.remove('active'));
+    el.querySelectorAll('#incident-filters .filter-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            el.querySelectorAll('#incident-filters .filter-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             renderTimeline(tab.dataset.filter);
         });
@@ -2251,75 +2293,74 @@ Pages.incidents = async function (el) {
 
 
 /* ================================================================
-   PAGE: FUTURES — Space Program Tracking
+   PAGE 12: FUTURES -- Space Program Tracking
    ================================================================ */
 Pages.futures = async function(el) {
     el.innerHTML = '<div class="loading">LOADING FUTURES INTELLIGENCE</div>';
-    const [data, summary] = await Promise.all([
+    var results = await Promise.all([
         api('/api/futures'),
         api('/api/futures/summary'),
     ]);
+    var data = results[0];
+    var summary = results[1];
     if (!data) { el.innerHTML = '<div class="empty-state">FUTURES DATA UNAVAILABLE</div>'; return; }
 
-    const nations = ['PRC', 'Russia', 'DPRK', 'Iran', 'US', 'UK', 'Australia', 'Japan', 'South Korea', 'NATO'];
-    const programs = Array.isArray(data) ? data : [];
+    var programs = Array.isArray(data) ? data : [];
+    var advCount = programs.filter(function(p) { return ['PRC','Russia','DPRK','Iran'].includes(p.nation); }).length;
+    var alliedCount = programs.filter(function(p) { return ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation); }).length;
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">${programs.filter(p => ['PRC','Russia','DPRK','Iran'].includes(p.nation)).length}</div><div class="tb-lbl">ADVERSARY PROGRAMS</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">${programs.filter(p => ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation)).length}</div><div class="tb-lbl">ALLIED PROGRAMS</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${programs.length}</div><div class="tb-lbl">TOTAL TRACKED</div></div></div>
-            </div>
-            <div class="filter-tabs mb-2" id="futures-tabs">
-                <div class="filter-tab active" data-filter="all">ALL</div>
-                <div class="filter-tab" data-filter="PRC" style="color:var(--red)">PRC</div>
-                <div class="filter-tab" data-filter="Russia" style="color:var(--cis)">RUSSIA</div>
-                <div class="filter-tab" data-filter="US" style="color:var(--cyan)">US/FVEY</div>
-                <div class="filter-tab" data-filter="adversary">ADVERSARY</div>
-                <div class="filter-tab" data-filter="ASAT">ASAT/COUNTER</div>
-                <div class="filter-tab" data-filter="lunar">LUNAR</div>
-            </div>
-            <div id="futures-list"></div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">' + advCount + '</div><div class="tb-lbl">ADVERSARY PROGRAMS</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + alliedCount + '</div><div class="tb-lbl">ALLIED PROGRAMS</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + programs.length + '</div><div class="tb-lbl">TOTAL TRACKED</div></div></div>' +
+        '</div>' +
+        '<div class="filter-tabs mb-2" id="futures-tabs">' +
+            '<div class="filter-tab active" data-filter="all">ALL</div>' +
+            '<div class="filter-tab" data-filter="PRC" style="color:var(--red)">PRC</div>' +
+            '<div class="filter-tab" data-filter="Russia" style="color:var(--cis)">RUSSIA</div>' +
+            '<div class="filter-tab" data-filter="US" style="color:var(--cyan)">US/FVEY</div>' +
+            '<div class="filter-tab" data-filter="adversary">ADVERSARY</div>' +
+            '<div class="filter-tab" data-filter="ASAT">ASAT/COUNTER</div>' +
+            '<div class="filter-tab" data-filter="lunar">LUNAR</div>' +
+        '</div>' +
+        '<div id="futures-list"></div></div>';
 
     function renderFutures(filter) {
-        let filtered = programs;
-        if (filter === 'adversary') filtered = programs.filter(p => ['PRC','Russia','DPRK','Iran'].includes(p.nation));
-        else if (filter === 'US/FVEY' || filter === 'US') filtered = programs.filter(p => ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation));
-        else if (filter === 'ASAT') filtered = programs.filter(p => (p.domain||'').toLowerCase().includes('asat') || (p.domain||'').toLowerCase().includes('counter'));
-        else if (filter === 'lunar') filtered = programs.filter(p => (p.domain||'').toLowerCase().includes('lunar') || (p.description||'').toLowerCase().includes('lunar') || (p.description||'').toLowerCase().includes('moon'));
-        else if (filter !== 'all') filtered = programs.filter(p => p.nation === filter);
+        var filtered = programs;
+        if (filter === 'adversary') filtered = programs.filter(function(p) { return ['PRC','Russia','DPRK','Iran'].includes(p.nation); });
+        else if (filter === 'US') filtered = programs.filter(function(p) { return ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation); });
+        else if (filter === 'ASAT') filtered = programs.filter(function(p) { return (p.domain||'').toLowerCase().indexOf('asat') >= 0 || (p.domain||'').toLowerCase().indexOf('counter') >= 0; });
+        else if (filter === 'lunar') filtered = programs.filter(function(p) { return (p.domain||'').toLowerCase().indexOf('lunar') >= 0 || (p.description||'').toLowerCase().indexOf('lunar') >= 0 || (p.description||'').toLowerCase().indexOf('moon') >= 0; });
+        else if (filter !== 'all') filtered = programs.filter(function(p) { return p.nation === filter; });
 
-        document.getElementById('futures-list').innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-            ${filtered.map(p => {
-                const isAdv = ['PRC','Russia','DPRK','Iran'].includes(p.nation);
-                const col = countryColor(p.nation === 'Russia' ? 'CIS' : p.nation === 'DPRK' ? 'NKOR' : p.nation === 'Iran' ? 'IRAN' : p.nation === 'PRC' ? 'PRC' : 'US');
-                const statusCol = p.status === 'operational' ? 'var(--green)' : p.status === 'development' ? 'var(--amber)' : p.status === 'delayed' ? 'var(--red)' : 'var(--cyan)';
-                return `
-                <div class="threat-card severity-${isAdv ? 'high' : 'low'}" style="border-left-color:${col}">
-                    <div class="tc-header">
-                        <span class="badge badge-${isAdv ? 'prc' : 'fvey'}">${p.nation || '?'}</span>
-                        <span class="tc-title">${p.program_name || p.name || '?'}</span>
-                    </div>
-                    <div class="tc-body">${p.description || ''}</div>
-                    <div class="tc-meta">
-                        DOMAIN: ${p.domain || '?'} // STATUS: <span style="color:${statusCol}">${(p.status||'?').toUpperCase()}</span>
-                        ${p.timeline ? ' // TIMELINE: ' + p.timeline : ''}
-                    </div>
-                    ${p.strategic_impact ? `<div class="tc-source">IMPACT: ${p.strategic_impact}</div>` : ''}
-                </div>`;
-            }).join('')}
-            </div>
-        `;
+        var html = '<div class="futures-grid">';
+        filtered.forEach(function(p) {
+            var isAdv = ['PRC','Russia','DPRK','Iran'].includes(p.nation);
+            var cCode = p.nation === 'Russia' ? 'CIS' : p.nation === 'DPRK' ? 'NKOR' : p.nation === 'Iran' ? 'IRAN' : p.nation === 'PRC' ? 'PRC' : 'US';
+            var col = countryColor(cCode);
+            var statusCol = p.status === 'operational' ? 'var(--green)' : p.status === 'development' ? 'var(--amber)' : p.status === 'delayed' ? 'var(--red)' : 'var(--cyan)';
+            html += '<div class="threat-card severity-' + (isAdv ? 'high' : 'low') + '" style="border-left-color:' + col + '">' +
+                '<div class="tc-header">' +
+                    '<span class="badge badge-' + (isAdv ? 'prc' : 'fvey') + '">' + (p.nation || '?') + '</span>' +
+                    ' <span class="tc-title">' + (p.program_name || p.name || '?') + '</span>' +
+                '</div>' +
+                '<div class="tc-body">' + (p.description || '') + '</div>' +
+                '<div class="tc-meta">' +
+                    'DOMAIN: ' + (p.domain || '?') + ' // STATUS: <span style="color:' + statusCol + '">' + (p.status||'?').toUpperCase() + '</span>' +
+                    (p.timeline ? ' // TIMELINE: ' + p.timeline : '') +
+                '</div>' +
+                (p.strategic_impact ? '<div class="tc-source">IMPACT: ' + p.strategic_impact + '</div>' : '') +
+            '</div>';
+        });
+        html += '</div>';
+        document.getElementById('futures-list').innerHTML = html;
     }
 
     renderFutures('all');
-    el.querySelectorAll('#futures-tabs .filter-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            el.querySelectorAll('#futures-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+    el.querySelectorAll('#futures-tabs .filter-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            el.querySelectorAll('#futures-tabs .filter-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             renderFutures(tab.dataset.filter);
         });
@@ -2328,66 +2369,71 @@ Pages.futures = async function(el) {
 
 
 /* ================================================================
-   PAGE: CONFERENCES — Global Space Forums Tracker
+   PAGE 13: CONFERENCES -- Global Space Forums Tracker
    ================================================================ */
 Pages.conferences = async function(el) {
     el.innerHTML = '<div class="loading">LOADING CONFERENCE INTELLIGENCE</div>';
-    const [upcoming, all] = await Promise.all([
+    var results = await Promise.all([
         api('/api/conferences/upcoming'),
         api('/api/conferences'),
     ]);
 
-    const events = Array.isArray(upcoming) ? upcoming : (Array.isArray(all) ? all : []);
+    var events = Array.isArray(results[0]) ? results[0] : (Array.isArray(results[1]) ? results[1] : []);
+    var highCount = events.filter(function(e) { return (e.relevance_to_fvey || e.relevance) === 'high'; }).length;
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${events.length}</div><div class="tb-lbl">TRACKED EVENTS</div></div></div>
-                <div class="tb-cell alert"><div class="tb-icon">&#9733;</div><div><div class="tb-val">${events.filter(e => e.relevance_to_fvey === 'high' || e.relevance === 'high').length}</div><div class="tb-lbl">HIGH RELEVANCE</div></div></div>
-            </div>
-            <div class="filter-tabs mb-2" id="conf-tabs">
-                <div class="filter-tab active" data-filter="all">ALL</div>
-                <div class="filter-tab" data-filter="high">HIGH RELEVANCE</div>
-                <div class="filter-tab" data-filter="military">MILITARY/GOV</div>
-                <div class="filter-tab" data-filter="industry">INDUSTRY</div>
-                <div class="filter-tab" data-filter="academic">ACADEMIC</div>
-            </div>
-            <div id="conf-list"></div>
-        </div>
-    `;
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + events.length + '</div><div class="tb-lbl">TRACKED EVENTS</div></div></div>' +
+            '<div class="tb-cell alert"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + highCount + '</div><div class="tb-lbl">HIGH RELEVANCE</div></div></div>' +
+        '</div>' +
+        '<div class="filter-tabs mb-2" id="conf-tabs">' +
+            '<div class="filter-tab active" data-filter="all">ALL</div>' +
+            '<div class="filter-tab" data-filter="high" style="color:var(--red)">HIGH RELEVANCE</div>' +
+            '<div class="filter-tab" data-filter="military">MILITARY/GOV</div>' +
+            '<div class="filter-tab" data-filter="industry">INDUSTRY</div>' +
+            '<div class="filter-tab" data-filter="academic">ACADEMIC</div>' +
+        '</div>' +
+        '<div id="conf-list"></div></div>';
 
     function renderConfs(filter) {
-        let filtered = events;
-        if (filter === 'high') filtered = events.filter(e => (e.relevance_to_fvey || e.relevance) === 'high');
-        else if (filter === 'military') filtered = events.filter(e => (e.category||e.organization||'').toLowerCase().match(/military|government|defense|defence|nato|space force|dod/));
-        else if (filter === 'industry') filtered = events.filter(e => (e.category||e.organization||'').toLowerCase().match(/industry|commercial|conference|satellite|iac/));
-        else if (filter === 'academic') filtered = events.filter(e => (e.category||e.organization||'').toLowerCase().match(/academic|research|university|think tank|csis|swf/));
+        var filtered = events;
+        if (filter === 'high') filtered = events.filter(function(e) { return (e.relevance_to_fvey || e.relevance) === 'high'; });
+        else if (filter === 'military') filtered = events.filter(function(e) { return (e.category||e.organization||'').toLowerCase().match(/military|government|defense|defence|nato|space force|dod/); });
+        else if (filter === 'industry') filtered = events.filter(function(e) { return (e.category||e.organization||'').toLowerCase().match(/industry|commercial|conference|satellite|iac/); });
+        else if (filter === 'academic') filtered = events.filter(function(e) { return (e.category||e.organization||'').toLowerCase().match(/academic|research|university|think tank|csis|swf/); });
 
-        document.getElementById('conf-list').innerHTML = filtered.map(e => {
-            const relCol = (e.relevance_to_fvey || e.relevance) === 'high' ? 'var(--red)' : (e.relevance_to_fvey || e.relevance) === 'medium' ? 'var(--amber)' : 'var(--cyan)';
-            return `
-            <div class="threat-card severity-medium" style="border-left-color:${relCol}">
-                <div class="tc-header">
-                    <span class="badge" style="background:rgba(255,176,0,0.1);color:${relCol};border:1px solid ${relCol}">${(e.relevance_to_fvey || e.relevance || '?').toUpperCase()}</span>
-                    <span class="tc-title">${e.name || '?'}</span>
-                </div>
-                <div class="tc-body">${e.description || ''}</div>
-                <div class="tc-meta">
-                    ${e.organization ? 'ORG: ' + e.organization + ' // ' : ''}
-                    ${e.location ? 'LOCATION: ' + e.location + ' // ' : ''}
-                    ${e.frequency ? 'FREQ: ' + e.frequency + ' // ' : ''}
-                    ${e.next_occurrence ? 'NEXT: ' + e.next_occurrence : (e.date_start ? 'DATE: ' + e.date_start : '')}
-                </div>
-                ${e.topics?.length ? `<div class="tc-source">TOPICS: ${e.topics.join(', ')}</div>` : ''}
-                ${e.url ? `<div class="tc-source"><a href="${e.url}" target="_blank" style="color:var(--cyan)">${e.url}</a></div>` : ''}
-            </div>`;
-        }).join('') || '<div class="empty-state">NO EVENTS FOUND</div>';
+        var html = '';
+        if (!filtered.length) {
+            html = '<div class="empty-state">NO EVENTS FOUND</div>';
+        } else {
+            filtered.forEach(function(e) {
+                var rel = (e.relevance_to_fvey || e.relevance || '?');
+                var relCol = rel === 'high' ? 'var(--red)' : rel === 'medium' ? 'var(--amber)' : 'var(--cyan)';
+                var nextDate = e.next_occurrence || e.date_start || '';
+                html += '<div class="threat-card severity-medium conf-card" style="border-left-color:' + relCol + '">' +
+                    '<div class="tc-header">' +
+                        '<span class="badge" style="background:rgba(255,176,0,0.1);color:' + relCol + ';border:1px solid ' + relCol + '">' + rel.toUpperCase() + '</span>' +
+                        ' <span class="tc-title">' + (e.name || '?') + '</span>' +
+                        (nextDate ? '<span class="conf-next-date" style="color:' + relCol + '">' + nextDate + '</span>' : '') +
+                    '</div>' +
+                    '<div class="tc-body">' + (e.description || '') + '</div>' +
+                    '<div class="tc-meta">' +
+                        (e.organization ? 'ORG: ' + e.organization + ' // ' : '') +
+                        (e.location ? 'LOCATION: ' + e.location + ' // ' : '') +
+                        (e.frequency ? 'FREQ: ' + e.frequency : '') +
+                    '</div>' +
+                    (e.topics && e.topics.length ? '<div class="tc-source">TOPICS: ' + e.topics.join(', ') + '</div>' : '') +
+                    (e.url ? '<div class="tc-source"><a href="' + e.url + '" target="_blank" style="color:var(--cyan)">' + e.url + '</a></div>' : '') +
+                '</div>';
+            });
+        }
+        document.getElementById('conf-list').innerHTML = html;
     }
 
     renderConfs('all');
-    el.querySelectorAll('#conf-tabs .filter-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            el.querySelectorAll('#conf-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+    el.querySelectorAll('#conf-tabs .filter-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            el.querySelectorAll('#conf-tabs .filter-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             renderConfs(tab.dataset.filter);
         });
@@ -2396,93 +2442,101 @@ Pages.conferences = async function(el) {
 
 
 /* ================================================================
-   PAGE: ARCHITECTURE — Ground Segment Architecture
+   PAGE 14: ARCHITECTURE -- Ground Segment Architecture
    ================================================================ */
 Pages.architecture = async function(el) {
     el.innerHTML = '<div class="loading">LOADING ARCHITECTURE INTELLIGENCE</div>';
-    const [prc, russia, fvey, comparison] = await Promise.all([
+    var results = await Promise.all([
         api('/api/architecture/prc'),
         api('/api/architecture/russia'),
         api('/api/architecture/fvey'),
         api('/api/architecture/comparison'),
     ]);
 
-    el.innerHTML = `
-        <div class="page-wrap">
-            <div class="threat-bar mb-2">
-                <div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">PRC</div><div class="tb-lbl">ADVERSARY ARCH</div></div></div>
-                <div class="tb-cell warning"><div class="tb-icon">&#9760;</div><div><div class="tb-val">RUS</div><div class="tb-lbl">ADVERSARY ARCH</div></div></div>
-                <div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">FVEY</div><div class="tb-lbl">ALLIED ARCH</div></div></div>
-            </div>
-            <div class="country-tabs mb-2" id="arch-tabs">
-                <div class="country-tab active" data-arch="prc" style="color:var(--red)">PRC ARCHITECTURE</div>
-                <div class="country-tab" data-arch="russia" style="color:var(--cis)">RUSSIAN ARCHITECTURE</div>
-                <div class="country-tab" data-arch="fvey" style="color:var(--cyan)">FVEY ARCHITECTURE</div>
-                <div class="country-tab" data-arch="comparison">COMPARISON</div>
-            </div>
-            <div id="arch-detail"></div>
-        </div>
-    `;
+    var prc = results[0];
+    var russia = results[1];
+    var fvey = results[2];
+    var comparison = results[3];
+
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">PRC</div><div class="tb-lbl">ADVERSARY ARCH</div></div></div>' +
+            '<div class="tb-cell warning"><div class="tb-icon">&#9760;</div><div><div class="tb-val">RUS</div><div class="tb-lbl">ADVERSARY ARCH</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">FVEY</div><div class="tb-lbl">ALLIED ARCH</div></div></div>' +
+        '</div>' +
+        '<div class="country-tabs mb-2" id="arch-tabs">' +
+            '<div class="country-tab active" data-arch="prc" style="color:var(--red)">PRC ARCHITECTURE</div>' +
+            '<div class="country-tab" data-arch="russia" style="color:var(--cis)">RUSSIAN ARCHITECTURE</div>' +
+            '<div class="country-tab" data-arch="fvey" style="color:var(--cyan)">FVEY ARCHITECTURE</div>' +
+            '<div class="country-tab" data-arch="comparison">COMPARISON</div>' +
+        '</div>' +
+        '<div id="arch-detail"></div></div>';
 
     function renderArch(which) {
-        const data = which === 'prc' ? prc : which === 'russia' ? russia : which === 'fvey' ? fvey : comparison;
+        var data = which === 'prc' ? prc : which === 'russia' ? russia : which === 'fvey' ? fvey : comparison;
         if (!data) { document.getElementById('arch-detail').innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
 
         if (which === 'comparison') {
-            const comp = data;
-            document.getElementById('arch-detail').innerHTML = `
-                <div class="panel mb-2">
-                    <div class="panel-head"><h3>ADVERSARY vs FVEY GROUND ARCHITECTURE COMPARISON</h3></div>
-                    <div class="panel-body" style="max-height:none">
-                        ${typeof comp === 'object' ? Object.entries(comp).map(([key, val]) => {
-                            if (typeof val === 'string') return `<div class="intel-field"><span class="intel-label">${key.replace(/_/g,' ').toUpperCase()}</span>${val}</div>`;
-                            if (typeof val === 'object' && !Array.isArray(val)) {
-                                return `<div class="threat-card severity-medium"><div class="tc-header"><span class="tc-title">${key.replace(/_/g,' ').toUpperCase()}</span></div><div class="tc-body">${JSON.stringify(val, null, 1).replace(/[{}"]/g,'').replace(/,\n/g,'<br>')}</div></div>`;
-                            }
-                            return '';
-                        }).join('') : `<div class="tc-body" style="white-space:pre-wrap">${JSON.stringify(comp, null, 2)}</div>`}
-                    </div>
-                </div>
-            `;
+            var compHtml = '';
+            if (typeof data === 'object') {
+                Object.entries(data).forEach(function(entry) {
+                    var key = entry[0];
+                    var val = entry[1];
+                    if (typeof val === 'string') {
+                        compHtml += '<div class="intel-field"><span class="intel-label">' + key.replace(/_/g,' ').toUpperCase() + '</span>' + val + '</div>';
+                    } else if (typeof val === 'object' && !Array.isArray(val)) {
+                        compHtml += '<div class="threat-card severity-medium"><div class="tc-header"><span class="tc-title">' + key.replace(/_/g,' ').toUpperCase() + '</span></div><div class="tc-body">' + JSON.stringify(val, null, 1).replace(/[{}"]/g,'').replace(/,\n/g,'<br>') + '</div></div>';
+                    }
+                });
+            } else {
+                compHtml = '<div class="tc-body" style="white-space:pre-wrap">' + JSON.stringify(data, null, 2) + '</div>';
+            }
+            document.getElementById('arch-detail').innerHTML = '<div class="panel mb-2"><div class="panel-head"><h3>ADVERSARY vs FVEY GROUND ARCHITECTURE COMPARISON</h3></div><div class="panel-body" style="max-height:none">' + compHtml + '</div></div>';
             return;
         }
 
-        // Render architecture detail
-        const col = which === 'prc' ? 'var(--red)' : which === 'russia' ? 'var(--cis)' : 'var(--cyan)';
-        const label = which === 'prc' ? 'PRC' : which === 'russia' ? 'RUSSIAN' : 'FVEY';
+        var col = which === 'prc' ? 'var(--red)' : which === 'russia' ? 'var(--cis)' : 'var(--cyan)';
+        var label = which === 'prc' ? 'PRC' : which === 'russia' ? 'RUSSIAN' : 'FVEY';
 
-        const sections = typeof data === 'object' && !Array.isArray(data) ? Object.entries(data) : [];
-        document.getElementById('arch-detail').innerHTML = sections.map(([key, val]) => {
-            if (key === 'country' || key === 'generated_utc') return '';
-            const title = key.replace(/_/g, ' ').toUpperCase();
-            let body = '';
+        var sections = (typeof data === 'object' && !Array.isArray(data)) ? Object.entries(data) : [];
+        var html = '';
+        sections.forEach(function(entry) {
+            var key = entry[0];
+            var val = entry[1];
+            if (key === 'country' || key === 'generated_utc') return;
+            var title = key.replace(/_/g, ' ').toUpperCase();
+            var body = '';
             if (typeof val === 'string') {
-                body = `<div class="tc-body">${val}</div>`;
+                body = '<div class="tc-body">' + val + '</div>';
             } else if (Array.isArray(val)) {
-                body = val.map(item => {
-                    if (typeof item === 'string') return `<div style="padding:3px 0;border-bottom:1px solid var(--border);font-size:10px">${item}</div>`;
-                    if (typeof item === 'object') {
-                        return `<div class="threat-card severity-medium" style="border-left-color:${col}">
-                            <div class="tc-header"><span class="tc-title">${item.name || item.title || Object.values(item)[0] || '?'}</span></div>
-                            <div class="tc-body">${item.description || item.role || item.detail || JSON.stringify(item)}</div>
-                            ${item.facilities ? `<div class="tc-meta">FACILITIES: ${Array.isArray(item.facilities) ? item.facilities.join(', ') : item.facilities}</div>` : ''}
-                            ${item.coverage ? `<div class="tc-meta">COVERAGE: ${item.coverage}</div>` : ''}
-                            ${item.vulnerability ? `<div class="tc-source" style="color:var(--red)">VULNERABILITY: ${item.vulnerability}</div>` : ''}
-                        </div>`;
+                val.forEach(function(item) {
+                    if (typeof item === 'string') {
+                        body += '<div style="padding:3px 0;border-bottom:1px solid var(--border);font-size:10px">' + item + '</div>';
+                    } else if (typeof item === 'object') {
+                        body += '<div class="threat-card severity-medium" style="border-left-color:' + col + '">' +
+                            '<div class="tc-header"><span class="tc-title">' + (item.name || item.title || Object.values(item)[0] || '?') + '</span></div>' +
+                            '<div class="tc-body">' + (item.description || item.role || item.detail || JSON.stringify(item)) + '</div>' +
+                            (item.facilities ? '<div class="tc-meta">FACILITIES: ' + (Array.isArray(item.facilities) ? item.facilities.join(', ') : item.facilities) + '</div>' : '') +
+                            (item.coverage ? '<div class="tc-meta">COVERAGE: ' + item.coverage + '</div>' : '') +
+                            (item.vulnerability ? '<div class="tc-source arch-vuln-highlight" style="color:var(--red)">VULNERABILITY: ' + item.vulnerability + '</div>' : '') +
+                        '</div>';
                     }
-                    return '';
-                }).join('');
+                });
             } else if (typeof val === 'object') {
-                body = `<div class="tc-body" style="font-size:10px">${Object.entries(val).map(([k,v]) => `<div class="intel-field"><span class="intel-label">${k.replace(/_/g,' ').toUpperCase()}</span>${typeof v === 'string' ? v : JSON.stringify(v)}</div>`).join('')}</div>`;
+                Object.entries(val).forEach(function(subEntry) {
+                    body += '<div class="intel-field"><span class="intel-label">' + subEntry[0].replace(/_/g,' ').toUpperCase() + '</span>' + (typeof subEntry[1] === 'string' ? subEntry[1] : JSON.stringify(subEntry[1])) + '</div>';
+                });
+                body = '<div class="tc-body" style="font-size:10px">' + body + '</div>';
             }
-            return `<div class="panel mb-2"><div class="panel-head"><h3>${label} // ${title}</h3></div><div class="panel-body" style="max-height:500px">${body}</div></div>`;
-        }).join('');
+            html += '<div class="panel mb-2"><div class="panel-head"><h3>' + label + ' // ' + title + '</h3></div><div class="panel-body" style="max-height:500px">' + body + '</div></div>';
+        });
+        document.getElementById('arch-detail').innerHTML = html;
     }
 
     renderArch('prc');
-    el.querySelectorAll('#arch-tabs .country-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            el.querySelectorAll('#arch-tabs .country-tab').forEach(t => t.classList.remove('active'));
+    el.querySelectorAll('#arch-tabs .country-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            el.querySelectorAll('#arch-tabs .country-tab').forEach(function(t) { t.classList.remove('active'); });
             tab.classList.add('active');
             renderArch(tab.dataset.arch);
         });

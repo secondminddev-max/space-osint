@@ -2046,3 +2046,408 @@ body {
     .phase-flow { flex-wrap: wrap; }
     .overmatch-global-score { font-size: 24px; }
 }
+
+
+/* ================================================================
+   FINAL POLISH PASS — Military OSINT v3
+   ================================================================ */
+
+/* ---- Live Indicator (pulsing green dot + LIVE text) ---- */
+.live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: var(--green);
+    text-transform: uppercase;
+}
+
+.live-indicator-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 4px var(--green), 0 0 8px var(--green);
+    animation: live-indicator-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes live-indicator-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green), 0 0 8px var(--green); }
+    50% { opacity: 0.2; box-shadow: 0 0 2px var(--green); }
+}
+
+/* ---- Hotspot Bars (CMD page) ---- */
+.hotspot-row {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,176,0,0.04);
+}
+
+.hotspot-row:last-child { border-bottom: none; }
+
+.hotspot-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+}
+
+.hotspot-bar-label {
+    font-size: 9px;
+    color: var(--text);
+    min-width: 50px;
+}
+
+.hotspot-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,176,0,0.06);
+    overflow: hidden;
+}
+
+.hotspot-bar-fill {
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+.hotspot-bar-val {
+    font-size: 10px;
+    color: var(--white);
+    min-width: 24px;
+    text-align: right;
+}
+
+/* ---- Proximity Flash Animation ---- */
+.proximity-flash {
+    animation: proximity-alert-flash 2s ease-in-out infinite;
+}
+
+@keyframes proximity-alert-flash {
+    0%, 100% { border-color: var(--border); }
+    25% { border-color: rgba(255,32,32,0.5); }
+    50% { border-color: var(--border); }
+    75% { border-color: rgba(255,32,32,0.3); }
+}
+
+.proximity-flash .op-head {
+    animation: proximity-head-flash 2s ease-in-out infinite;
+}
+
+@keyframes proximity-head-flash {
+    0%, 100% { background: rgba(255,176,0,0.03); }
+    50% { background: rgba(255,32,32,0.06); }
+}
+
+/* ---- Key Threat Banner (Adversary page) ---- */
+.key-threat-banner {
+    padding: 8px 12px;
+    background: rgba(255,32,32,0.04);
+    border: 1px solid rgba(255,32,32,0.15);
+    border-left: 3px solid var(--red);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.key-threat-banner .intel-label {
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: var(--amber);
+    white-space: nowrap;
+}
+
+/* ---- Doctrine / Strategic Context styling ---- */
+.doctrine-field {
+    background: rgba(255,176,0,0.02);
+    border: 1px solid rgba(255,176,0,0.06);
+    border-left: 2px solid var(--amber);
+    padding: 6px 8px;
+    margin-bottom: 8px;
+}
+
+/* ---- Intelligence Gaps warning styling ---- */
+.intel-gap-field {
+    background: rgba(255,140,0,0.04);
+    border: 1px solid rgba(255,140,0,0.12);
+    border-left: 2px solid var(--cis);
+    padding: 6px 8px;
+    margin-bottom: 8px;
+}
+
+/* ---- ISR Table aggressive row coloring ---- */
+.isr-table tbody tr td {
+    background: rgba(255,32,32,0.03);
+}
+
+.isr-table tbody tr:hover td {
+    background: rgba(255,32,32,0.08) !important;
+}
+
+.isr-table tbody tr:nth-child(even) td {
+    background: rgba(255,32,32,0.05);
+}
+
+/* ---- Critical ASAT glow effect ---- */
+.critical-glow {
+    box-shadow: 0 0 8px rgba(255,32,32,0.15), inset 0 0 20px rgba(255,32,32,0.04);
+    animation: critical-glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes critical-glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(255,32,32,0.15), inset 0 0 20px rgba(255,32,32,0.04); }
+    50% { box-shadow: 0 0 16px rgba(255,32,32,0.25), inset 0 0 30px rgba(255,32,32,0.06); }
+}
+
+/* ---- Resilience Status Label ---- */
+.resilience-status {
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    min-width: 55px;
+    text-align: right;
+}
+
+/* ---- Recommendation Number Badge ---- */
+.rec-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 16px;
+    font-size: 9px;
+    color: var(--text-dim);
+    background: rgba(255,176,0,0.05);
+    border: 1px solid rgba(255,176,0,0.1);
+    font-family: var(--font);
+}
+
+/* ---- Ground Station Map Legend ---- */
+.gs-legend {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 500;
+    display: flex;
+    gap: 12px;
+    padding: 5px 10px;
+    background: rgba(0,0,0,0.88);
+    border: 1px solid var(--border);
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+}
+
+.gs-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* ---- Futures 2-column grid ---- */
+.futures-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+@media (max-width: 1200px) {
+    .futures-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- Conference card next date ---- */
+.conf-next-date {
+    font-size: 10px;
+    font-family: var(--font);
+    letter-spacing: 0.5px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.conf-card {
+    transition: all 0.15s;
+}
+
+.conf-card:hover {
+    transform: translateX(2px);
+}
+
+/* ---- Architecture vulnerability highlight ---- */
+.arch-vuln-highlight {
+    background: rgba(255,32,32,0.04);
+    border: 1px solid rgba(255,32,32,0.1);
+    padding: 4px 6px;
+    margin-top: 4px;
+}
+
+/* ---- Enhanced panel hover effects ---- */
+.panel {
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.panel:hover {
+    box-shadow: inset 0 0 30px rgba(255,176,0,0.02), 0 0 3px rgba(255,176,0,0.12);
+}
+
+/* ---- Enhanced filter tab hover ---- */
+.filter-tab {
+    transition: all 0.15s;
+    position: relative;
+}
+
+.filter-tab:hover {
+    background: rgba(255,176,0,0.04);
+}
+
+.filter-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--amber);
+}
+
+/* ---- Country tab enhanced ---- */
+.country-tab {
+    transition: all 0.15s;
+    position: relative;
+}
+
+.country-tab::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    right: 50%;
+    height: 2px;
+    background: var(--amber);
+    transition: all 0.2s;
+}
+
+.country-tab.active::after {
+    left: 0;
+    right: 0;
+}
+
+/* ---- Sharper military borders on key elements ---- */
+.strategy-banner {
+    position: relative;
+}
+
+.strategy-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+
+.threat-bar {
+    border: 1px solid rgba(255,176,0,0.08);
+}
+
+/* ---- Table header sharpen ---- */
+.data-table th {
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--border);
+}
+
+/* ---- Overlay panel improvements ---- */
+.overlay-panel {
+    transition: all 0.15s;
+}
+
+.overlay-panel .op-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ---- Wargame card improvements ---- */
+.wargame-card {
+    transition: all 0.2s;
+}
+
+.wargame-card:hover {
+    transform: translateX(2px);
+}
+
+.wargame-card.active {
+    transform: translateX(0);
+}
+
+/* ---- Incident item hover ---- */
+.incident-item {
+    transition: all 0.15s;
+}
+
+.incident-item:hover {
+    transform: translateX(3px);
+}
+
+/* ---- Scrollbar for main content ---- */
+#content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,176,0,0.15) transparent;
+}
+
+/* ---- Empty state improvements ---- */
+.empty-state {
+    animation: blink-text 2s step-end infinite;
+}
+
+/* ---- Badge hover ---- */
+.badge {
+    transition: all 0.15s;
+}
+
+/* ---- News line hover ---- */
+.news-line {
+    transition: all 0.15s;
+}
+
+.news-line:hover {
+    opacity: 1;
+    background: rgba(255,176,0,0.02);
+    padding-left: 3px;
+}
+
+/* ---- Sharper launch hero ---- */
+.launch-hero {
+    position: relative;
+    overflow: hidden;
+}
+
+.launch-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+
+.launch-hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+}
+
+/* ---- Responsive for new elements ---- */
+@media (max-width: 1200px) {
+    .gs-legend { flex-wrap: wrap; gap: 6px; }
+}
+
+@media (max-width: 900px) {
+    .key-threat-banner { flex-wrap: wrap; }
+    .conf-next-date { margin-left: 0; }
+}
