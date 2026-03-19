@@ -1058,3 +1058,514 @@ body {
 .toh-level.critical { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,32,32,0.4); }
 .toh-level.high { background: rgba(255,140,0,0.12); color: var(--cis); border: 1px solid rgba(255,140,0,0.4); }
 .toh-level.elevated { background: rgba(255,176,0,0.12); color: var(--amber); border: 1px solid rgba(255,176,0,0.4); }
+
+/* ================================================================
+   ENHANCED DASHBOARD STYLES — Military OSINT v2
+   ================================================================ */
+
+/* ---- Pulsing Glow for Hostile ISR Markers ---- */
+@keyframes pulse-isr {
+    0%, 100% { box-shadow: 0 0 4px 1px rgba(255,32,32,0.4); }
+    50% { box-shadow: 0 0 12px 4px rgba(255,32,32,0.8); }
+}
+
+@keyframes pulse-isr-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+.isr-pulse-marker {
+    border-radius: 50%;
+    animation: pulse-isr 2s ease-in-out infinite;
+}
+
+/* ---- Zebra Striping on Tables ---- */
+.data-table tbody tr:nth-child(even) td {
+    background: rgba(255,176,0,0.015);
+}
+
+.data-table tbody tr:nth-child(odd) td {
+    background: transparent;
+}
+
+.data-table tbody tr:hover td {
+    background: rgba(255,176,0,0.04) !important;
+}
+
+/* ---- Card Hover States ---- */
+.threat-card {
+    transition: all 0.15s ease;
+    cursor: default;
+}
+
+.threat-card:hover {
+    background: rgba(255,176,0,0.03);
+    border-color: var(--border-bright);
+    transform: translateX(2px);
+}
+
+.overlay-panel:hover {
+    border-color: var(--border-bright);
+}
+
+/* ---- Launch Countdown Hero ---- */
+.launch-hero {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,32,32,0.04);
+    border: 1px solid rgba(255,32,32,0.25);
+    border-left: 3px solid var(--red);
+    padding: 12px 20px;
+    margin-bottom: 4px;
+    gap: 20px;
+}
+
+.launch-hero-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--red);
+    opacity: 0.7;
+}
+
+.launch-hero-name {
+    font-size: 12px;
+    color: var(--white);
+    letter-spacing: 1px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.launch-hero-countdown {
+    font-size: 36px;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(255,32,32,0.5), 0 0 40px rgba(255,32,32,0.2);
+    font-family: var(--font);
+    animation: pulse-countdown 2s ease-in-out infinite;
+}
+
+@keyframes pulse-countdown {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.launch-hero-meta {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+/* ---- Adversary Mini Map ---- */
+.adv-mini-map {
+    width: 100%;
+    height: 280px;
+    min-height: 280px;
+    background: #000;
+}
+
+/* ---- Category Breakdown Bars ---- */
+.cat-breakdown {
+    display: grid;
+    grid-template-columns: 110px 1fr 32px;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,176,0,0.04);
+    font-size: 9px;
+}
+
+.cat-breakdown:last-child { border-bottom: none; }
+
+.cat-breakdown .cat-label {
+    color: var(--text);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.cat-breakdown .cat-bar-wrap {
+    height: 10px;
+    background: rgba(255,255,255,0.02);
+    position: relative;
+}
+
+.cat-breakdown .cat-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.cat-breakdown .cat-bar::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,255,255,0.4);
+}
+
+.cat-breakdown .cat-count {
+    font-size: 11px;
+    text-align: right;
+    color: var(--white);
+}
+
+/* ---- Resilience Score ---- */
+.resilience-meter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0;
+}
+
+.resilience-bar-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,176,0,0.08);
+    position: relative;
+}
+
+.resilience-bar-fill {
+    height: 100%;
+    transition: width 0.4s ease;
+}
+
+.resilience-score {
+    font-size: 14px;
+    font-family: var(--font);
+    min-width: 32px;
+    text-align: right;
+}
+
+.resilience-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    min-width: 90px;
+}
+
+/* ---- Severity Indicator Dots ---- */
+.severity-dots {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+}
+
+.severity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.severity-dot.filled-critical { background: var(--red); box-shadow: 0 0 6px rgba(255,32,32,0.5); }
+.severity-dot.filled-high { background: var(--cis); box-shadow: 0 0 6px rgba(255,140,0,0.5); }
+.severity-dot.filled-medium { background: var(--amber); }
+.severity-dot.filled-low { background: var(--green); }
+.severity-dot.empty { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+
+/* ---- Collapsible Scenario Sections ---- */
+.scenario-section {
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+    background: var(--bg-panel);
+    transition: all 0.15s;
+}
+
+.scenario-section:hover {
+    border-color: var(--border-bright);
+}
+
+.scenario-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(255,176,0,0.02);
+    border-bottom: 1px solid transparent;
+    transition: all 0.15s;
+}
+
+.scenario-header:hover {
+    background: rgba(255,176,0,0.04);
+}
+
+.scenario-header .chevron {
+    font-size: 10px;
+    color: var(--amber);
+    transition: transform 0.2s;
+    display: inline-block;
+    width: 12px;
+}
+
+.scenario-section.open .scenario-header {
+    border-bottom-color: var(--border);
+}
+
+.scenario-section.open .chevron {
+    transform: rotate(90deg);
+}
+
+.scenario-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.scenario-section.open .scenario-body {
+    max-height: 800px;
+}
+
+.scenario-body-inner {
+    padding: 10px 12px;
+}
+
+/* ---- ASAT Two-Column Grid ---- */
+.asat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+/* ---- ASAT Summary Chart ---- */
+.asat-summary-bar {
+    display: flex;
+    height: 32px;
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+    overflow: hidden;
+}
+
+.asat-summary-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--white);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.asat-summary-segment:hover {
+    filter: brightness(1.3);
+}
+
+.asat-summary-segment .seg-label {
+    font-size: 7px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+}
+
+/* ---- Ground Station Marker Styles ---- */
+.gs-launch-marker {
+    width: 14px;
+    height: 14px;
+    background: var(--red);
+    border: 2px solid rgba(255,32,32,0.7);
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+    animation: pulse-isr 3s ease-in-out infinite;
+}
+
+.gs-ttc-marker {
+    width: 10px;
+    height: 10px;
+    background: var(--cis);
+    border: 1px solid rgba(255,140,0,0.6);
+    border-radius: 2px;
+}
+
+.gs-radar-marker {
+    width: 7px;
+    height: 7px;
+    background: var(--amber);
+    border: 1px solid rgba(255,176,0,0.5);
+    border-radius: 50%;
+}
+
+.gs-fvey-marker {
+    width: 10px;
+    height: 10px;
+    background: var(--fvey);
+    border: 1px solid rgba(32,128,255,0.6);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+/* ---- Strategy Page Gravitas ---- */
+.strategy-banner {
+    text-align: center;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-bottom: 2px solid var(--red);
+    background: linear-gradient(180deg, rgba(255,32,32,0.04) 0%, transparent 100%);
+    margin-bottom: 4px;
+}
+
+.strategy-title {
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: var(--amber);
+    margin-bottom: 4px;
+    text-shadow: 0 0 15px rgba(255,176,0,0.2);
+}
+
+.strategy-subtitle {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+}
+
+.strategy-threat-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin: 10px 0;
+}
+
+.strategy-threat-level {
+    font-size: 28px;
+    letter-spacing: 6px;
+    padding: 6px 24px;
+    border: 2px solid;
+    text-shadow: 0 0 20px currentColor;
+    animation: pulse-threat-level 3s ease-in-out infinite;
+}
+
+@keyframes pulse-threat-level {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+}
+
+.strategy-threat-level.critical {
+    color: var(--red);
+    border-color: var(--red);
+    background: rgba(255,32,32,0.06);
+}
+
+.strategy-threat-level.high {
+    color: var(--cis);
+    border-color: var(--cis);
+    background: rgba(255,140,0,0.06);
+}
+
+.strategy-threat-level.elevated {
+    color: var(--amber);
+    border-color: var(--amber);
+    background: rgba(255,176,0,0.06);
+}
+
+/* ---- Kp Chart in CMD env bar ---- */
+.cmd-kp-chart-wrap {
+    flex: 2;
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    background: var(--bg);
+    min-width: 180px;
+    height: 100%;
+}
+
+.cmd-kp-chart-wrap canvas {
+    max-height: 50px;
+    width: 100%;
+}
+
+/* ---- Intelligence Summary Box ---- */
+.intel-summary {
+    padding: 8px 10px;
+    background: rgba(255,176,0,0.02);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--amber);
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.intel-summary strong {
+    color: var(--amber);
+    font-weight: normal;
+    letter-spacing: 0.5px;
+}
+
+/* ---- Map stat overlay (top-left) ---- */
+.map-stat-overlay {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.map-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid var(--border);
+    font-size: 9px;
+}
+
+.map-stat-val {
+    font-size: 14px;
+    color: var(--white);
+}
+
+.map-stat-lbl {
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+}
+
+/* ---- Orbital Regime Distribution ---- */
+.regime-strip {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.regime-card {
+    flex: 1;
+    padding: 8px 10px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.regime-card-val {
+    font-size: 20px;
+    color: var(--white);
+}
+
+.regime-card-label {
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ---- Enhanced Responsive ---- */
+@media (max-width: 1200px) {
+    .asat-grid { grid-template-columns: 1fr; }
+    .regime-strip { flex-wrap: wrap; }
+    .launch-hero { flex-wrap: wrap; justify-content: center; }
+    .launch-hero-countdown { font-size: 24px; }
+}
+
+@media (max-width: 900px) {
+    .launch-hero-countdown { font-size: 18px; letter-spacing: 2px; }
+    .strategy-threat-level { font-size: 18px; letter-spacing: 3px; }
+}

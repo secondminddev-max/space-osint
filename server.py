@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from contextlib import asynccontextmanager
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -16,6 +16,7 @@ from config import HOST, PORT
 from data_sources import (
     space_weather, news, launches, neo, astronauts, donki, celestrak,
     adversary_sats, ground_stations, missile_intel, threat_assessment,
+    researcher, live_intel, social_monitor,
 )
 
 _client: httpx.AsyncClient = None
@@ -49,6 +50,10 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 @app.get("/")
 async def root():
     return FileResponse(os.path.join(static_dir, "index.html"))
+
+@app.get("/landing")
+async def landing():
+    return FileResponse(os.path.join(static_dir, "landing.html"))
 
 
 # ---- Live Data APIs ----
@@ -185,6 +190,50 @@ async def api_conflict_scenarios():
     return JSONResponse(threat_assessment.get_conflict_scenarios())
 
 
+# ---- Intelligence Research & Analysis ----
+
+@app.get("/api/intel/research")
+async def api_intel_research():
+    """Aggregated research feed from all open intelligence sources."""
+    return JSONResponse(await researcher.fetch_research_feed(_client))
+
+@app.get("/api/intel/arxiv")
+async def api_intel_arxiv():
+    """Academic research papers on space security from ArXiv."""
+    return JSONResponse(await researcher.fetch_arxiv_papers(_client))
+
+@app.get("/api/intel/sitrep")
+async def api_intel_sitrep():
+    """Live situation report — real-time threat assessment."""
+    return JSONResponse(await live_intel.generate_situation_report(_client))
+
+@app.get("/api/intel/brief")
+async def api_intel_brief():
+    """Daily intelligence brief — comprehensive daily assessment."""
+    return JSONResponse(await live_intel.generate_daily_brief(_client))
+
+@app.get("/api/intel/hotspots")
+async def api_intel_hotspots():
+    """Strategic area coverage analysis — adversary ISR over key hotspots."""
+    return JSONResponse(await live_intel.get_hotspot_analysis(_client))
+
+@app.get("/api/intel/coverage")
+async def api_intel_coverage(
+    lat: float = Query(23.5, description="Latitude of area of interest"),
+    lng: float = Query(120.5, description="Longitude of area of interest"),
+    radius: float = Query(1500, description="Detection radius in km"),
+):
+    """Check adversary ISR satellite coverage over a specific area."""
+    return JSONResponse(
+        await live_intel.get_area_of_interest_coverage(_client, lat, lng, radius)
+    )
+
+@app.get("/api/intel/social")
+async def api_intel_social():
+    """Social media intelligence feed — Bluesky and Reddit."""
+    return JSONResponse(await social_monitor.fetch_social_intel(_client))
+
+
 # ---- System ----
 
 @app.get("/api/status")
@@ -192,7 +241,7 @@ async def api_status():
     return JSONResponse({
         "service": "SPACE OSINT — Global Operating Centre",
         "status": "operational",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "classification": "UNCLASSIFIED // OSINT",
     })
 

@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecondMind Space Intelligence — FVEY Space Domain Awareness Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --amber: #FFB000;
+            --amber-dim: #CC8D00;
+            --amber-glow: rgba(255, 176, 0, 0.15);
+            --bg: #000000;
+            --surface: #0A0A0A;
+            --border: #1A1A1A;
+            --border-bright: #2A2A0A;
+            --text: #D0D0D0;
+            --text-dim: #808080;
+            --white: #FFFFFF;
+            --red: #FF3333;
+            --green: #00FF66;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Classification Banner */
+        .class-banner {
+            background: var(--green);
+            color: #000;
+            text-align: center;
+            font-size: 11px;
+            padding: 3px 0;
+            letter-spacing: 3px;
+            font-weight: bold;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 22px;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: rgba(0, 0, 0, 0.92);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-brand .flag { font-size: 20px; }
+        .nav-brand .brand-text {
+            color: var(--amber);
+            font-size: 13px;
+            letter-spacing: 2px;
+        }
+        .nav-links { display: flex; gap: 24px; align-items: center; }
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 11px;
+            letter-spacing: 2px;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--amber); }
+        .nav-cta {
+            background: var(--amber) !important;
+            color: #000 !important;
+            padding: 6px 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 2px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-cta:hover { background: var(--white) !important; }
+
+        /* Hero */
+        .hero {
+            padding: 180px 32px 100px;
+            text-align: center;
+            position: relative;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(255,176,0,0.06) 0%, transparent 60%),
+                var(--bg);
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255,176,0,0.015) 2px,
+                rgba(255,176,0,0.015) 4px
+            );
+            pointer-events: none;
+        }
+        .hero-flag { font-size: 48px; margin-bottom: 24px; display: block; }
+        .hero-badge {
+            display: inline-block;
+            border: 1px solid var(--amber);
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 4px;
+            padding: 6px 20px;
+            margin-bottom: 32px;
+        }
+        .hero h1 {
+            color: var(--white);
+            font-size: clamp(28px, 4vw, 48px);
+            letter-spacing: 4px;
+            line-height: 1.3;
+            margin-bottom: 20px;
+            font-weight: normal;
+        }
+        .hero h1 .amber { color: var(--amber); }
+        .hero-sub {
+            color: var(--text-dim);
+            font-size: 14px;
+            max-width: 720px;
+            margin: 0 auto 40px;
+            line-height: 1.8;
+            letter-spacing: 1px;
+        }
+        .hero-cta {
+            display: inline-block;
+            background: var(--amber);
+            color: #000;
+            padding: 14px 40px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            letter-spacing: 3px;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            transition: background 0.2s;
+        }
+        .hero-cta:hover { background: var(--white); }
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 60px;
+            flex-wrap: wrap;
+        }
+        .hero-stat {
+            text-align: center;
+        }
+        .hero-stat .val {
+            color: var(--amber);
+            font-size: 32px;
+            display: block;
+        }
+        .hero-stat .lbl {
+            color: var(--text-dim);
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* Section base */
+        section {
+            padding: 80px 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0;
+        }
+        .section-label {
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 4px;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            color: var(--white);
+            font-size: clamp(20px, 3vw, 28px);
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            font-weight: normal;
+        }
+        .section-desc {
+            color: var(--text-dim);
+            font-size: 13px;
+            max-width: 700px;
+            line-height: 1.8;
+            margin-bottom: 48px;
+        }
+
+        /* Capabilities Grid */
+        .cap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2px;
+        }
+        .cap-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 32px;
+        }
+        .cap-card:hover { border-color: var(--amber); }
+        .cap-icon {
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            display: block;
+        }
+        .cap-card h3 {
+            color: var(--white);
+            font-size: 14px;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            font-weight: normal;
+        }
+        .cap-card p {
+            color: var(--text-dim);
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        /* Data Sources */
+        .ds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2px;
+        }
+        .ds-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        .ds-card:hover { border-color: var(--amber); }
+        .ds-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            margin-top: 6px;
+            flex-shrink: 0;
+            animation: pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .ds-card h4 {
+            color: var(--white);
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            font-weight: normal;
+        }
+        .ds-card p {
+            color: var(--text-dim);
+            font-size: 11px;
+            line-height: 1.7;
+        }
+        .ds-card .ds-tag {
+            display: inline-block;
+            border: 1px solid var(--border-bright);
+            color: var(--amber-dim);
+            font-size: 9px;
+            padding: 2px 8px;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        /* Whitepaper */
+        .whitepaper-section {
+            max-width: 1200px;
+            padding: 80px 32px;
+            margin: 0 auto;
+        }
+        .whitepaper-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 0;
+        }
+        .wp-header {
+            background: linear-gradient(180deg, #111 0%, var(--surface) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 48px;
+            text-align: center;
+        }
+        .wp-header .wp-class {
+            color: var(--green);
+            font-size: 10px;
+            letter-spacing: 4px;
+            margin-bottom: 24px;
+        }
+        .wp-header h2 {
+            color: var(--white);
+            font-size: clamp(16px, 2.5vw, 22px);
+            letter-spacing: 2px;
+            font-weight: normal;
+            line-height: 1.5;
+            max-width: 800px;
+            margin: 0 auto 16px;
+        }
+        .wp-header .wp-meta {
+            color: var(--text-dim);
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+        .wp-body {
+            padding: 48px;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+        .wp-body h3 {
+            color: var(--amber);
+            font-size: 14px;
+            letter-spacing: 3px;
+            margin: 48px 0 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            font-weight: normal;
+        }
+        .wp-body h3:first-child { margin-top: 0; }
+        .wp-body p {
+            color: var(--text);
+            font-size: 12px;
+            line-height: 2;
+            margin-bottom: 16px;
+        }
+        .wp-body ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 16px;
+        }
+        .wp-body ul li {
+            color: var(--text);
+            font-size: 12px;
+            line-height: 2;
+            padding-left: 20px;
+            position: relative;
+        }
+        .wp-body ul li::before {
+            content: '//';
+            color: var(--amber);
+            position: absolute;
+            left: 0;
+            font-size: 11px;
+        }
+        .wp-body .wp-callout {
+            border-left: 2px solid var(--amber);
+            padding: 16px 24px;
+            margin: 24px 0;
+            background: rgba(255,176,0,0.03);
+        }
+        .wp-body .wp-callout p {
+            color: var(--amber-dim);
+            font-size: 12px;
+            margin: 0;
+        }
+
+        /* About */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: start;
+        }
+        .about-text p {
+            font-size: 12px;
+            line-height: 2;
+            margin-bottom: 16px;
+        }
+        .about-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--amber);
+            padding: 16px 24px;
+            margin-top: 16px;
+        }
+        .about-badge .flag { font-size: 28px; }
+        .about-badge .badge-text {
+            color: var(--amber);
+            font-size: 12px;
+            letter-spacing: 3px;
+        }
+        .about-points { list-style: none; padding: 0; }
+        .about-points li {
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .about-points li:last-child { border-bottom: none; }
+        .ap-label {
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 2px;
+            min-width: 100px;
+            flex-shrink: 0;
+            padding-top: 2px;
+        }
+        .ap-value {
+            color: var(--text);
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--border);
+            padding: 32px;
+            text-align: center;
+        }
+        .footer p {
+            color: var(--text-dim);
+            font-size: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .footer-banner {
+            background: var(--green);
+            color: #000;
+            text-align: center;
+            font-size: 11px;
+            padding: 3px 0;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .about-grid { grid-template-columns: 1fr; }
+            .hero-stats { gap: 24px; }
+            .nav-links a:not(.nav-cta) { display: none; }
+            .wp-body { padding: 24px; }
+            .wp-header { padding: 32px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Classification Banner -->
+<div class="class-banner">UNCLASSIFIED // OSINT // REL TO FVEY</div>
+
+<!-- Navigation -->
+<nav class="nav">
+    <div class="nav-inner">
+        <div class="nav-brand">
+            <span class="flag">&#127462;&#127482;</span>
+            <span class="brand-text">SECONDMIND SPACE INTELLIGENCE</span>
+        </div>
+        <div class="nav-links">
+            <a href="#capabilities">CAPABILITIES</a>
+            <a href="#data-sources">DATA SOURCES</a>
+            <a href="#whitepaper">WHITEPAPER</a>
+            <a href="#about">ABOUT</a>
+            <a href="/" class="nav-cta">ACCESS DASHBOARD &rarr;</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <span class="hero-flag">&#127462;&#127482;</span>
+    <div class="hero-badge">PROUDLY AUSTRALIAN</div>
+    <h1>FVEY <span class="amber">SPACE DOMAIN<br>AWARENESS</span> PLATFORM</h1>
+    <p class="hero-sub">
+        Real-time space intelligence for the Five Eyes community.
+        Continuous monitoring of adversary orbital assets, counterspace threats,
+        and space domain operations using open-source intelligence.
+    </p>
+    <a href="/" class="hero-cta">ACCESS DASHBOARD &rarr;</a>
+    <div class="hero-stats">
+        <div class="hero-stat">
+            <span class="val">800+</span>
+            <span class="lbl">ADVERSARY ASSETS TRACKED</span>
+        </div>
+        <div class="hero-stat">
+            <span class="val">5</span>
+            <span class="lbl">LIVE API FEEDS</span>
+        </div>
+        <div class="hero-stat">
+            <span class="val">4</span>
+            <span class="lbl">THREAT NATIONS MONITORED</span>
+        </div>
+        <div class="hero-stat">
+            <span class="val">24/7</span>
+            <span class="lbl">CONTINUOUS COLLECTION</span>
+        </div>
+    </div>
+</section>
+
+<!-- Capabilities -->
+<hr class="section-divider">
+<section id="capabilities">
+    <div class="section-label">// 01 CAPABILITIES</div>
+    <h2 class="section-title">PLATFORM CAPABILITIES</h2>
+    <p class="section-desc">
+        Integrated space domain awareness across all operational domains.
+        Purpose-built for Five Eyes intelligence requirements.
+    </p>
+    <div class="cap-grid">
+        <div class="cap-card">
+            <span class="cap-icon">[ SAT-TRACK ]</span>
+            <h3>ADVERSARY SATELLITE TRACKING</h3>
+            <p>Continuous orbital tracking of 800+ hostile space assets across PRC, Russian, DPRK, and Iranian constellations. Real-time TLE propagation, manoeuvre detection, and orbital regime classification. Automated cataloguing by mission type: ISR, SIGINT, ELINT, navigation, and communications.</p>
+        </div>
+        <div class="cap-card">
+            <span class="cap-icon">[ CTR-SPACE ]</span>
+            <h3>COUNTERSPACE THREAT MONITORING</h3>
+            <p>Comprehensive tracking of adversary counterspace programmes including direct-ascent ASAT weapons, co-orbital inspection vehicles, directed energy systems, and electronic warfare capabilities. Threat correlation against FVEY space architecture for vulnerability assessment.</p>
+        </div>
+        <div class="cap-card">
+            <span class="cap-icon">[ GND-INFRA ]</span>
+            <h3>GROUND INFRASTRUCTURE MAPPING</h3>
+            <p>Geolocation and characterisation of adversary ground segment infrastructure. Tracking, telemetry, and command (TT&C) stations, launch facilities, space surveillance sites, and satellite operations centres. Coverage mapped against orbital ground tracks for contact window analysis.</p>
+        </div>
+        <div class="cap-card">
+            <span class="cap-icon">[ STRAT-INT ]</span>
+            <h3>STRATEGIC ASSESSMENTS</h3>
+            <p>Automated generation of strategic intelligence assessments based on aggregated OSINT indicators. Threat level evaluations, capability gap analysis, and trend reporting aligned with Five Eyes intelligence sharing frameworks and standardised reporting formats.</p>
+        </div>
+        <div class="cap-card">
+            <span class="cap-icon">[ CON-PLAN ]</span>
+            <h3>CONFLICT SCENARIO PLANNING</h3>
+            <p>Wargaming and scenario modelling for space domain conflicts. Assessment of first-strike counterspace campaigns, degradation cascades, and reconstitution timelines. Support to operational planning for space control and space protection missions.</p>
+        </div>
+        <div class="cap-card">
+            <span class="cap-icon">[ SPC-WX ]</span>
+            <h3>SPACE WEATHER OPERATIONS</h3>
+            <p>Real-time space weather monitoring including solar flare activity, coronal mass ejections, geomagnetic storm indices, and radiation belt conditions. Operational impact assessment for satellite communications, GPS accuracy, and HF propagation across FVEY areas of responsibility.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Data Sources -->
+<hr class="section-divider">
+<section id="data-sources">
+    <div class="section-label">// 02 DATA SOURCES</div>
+    <h2 class="section-title">LIVE INTELLIGENCE FEEDS</h2>
+    <p class="section-desc">
+        All data sourced from unclassified, publicly available APIs.
+        No classification handling requirements. No ITAR restrictions.
+        Fully deployable across all FVEY partner networks.
+    </p>
+    <div class="ds-grid">
+        <div class="ds-card">
+            <div class="ds-dot"></div>
+            <div>
+                <h4>CELESTRAK ORBITAL DATA</h4>
+                <p>GP element sets for the complete unclassified satellite catalogue. Two-line element (TLE) propagation for orbital prediction, conjunction assessment, and manoeuvre detection. Coverage of all orbital regimes from LEO through GEO and beyond.</p>
+                <span class="ds-tag">LIVE // NORAD CATALOG</span>
+            </div>
+        </div>
+        <div class="ds-card">
+            <div class="ds-dot"></div>
+            <div>
+                <h4>NOAA SPACE WEATHER</h4>
+                <p>Real-time geomagnetic indices, solar wind parameters, and space weather alerts from the National Oceanic and Atmospheric Administration. Kp index history, solar flux measurements, and proton event monitoring for operational impact assessment.</p>
+                <span class="ds-tag">LIVE // SWPC</span>
+            </div>
+        </div>
+        <div class="ds-card">
+            <div class="ds-dot"></div>
+            <div>
+                <h4>NASA NEO / DONKI</h4>
+                <p>Near-Earth Object tracking from the Jet Propulsion Laboratory and coronal mass ejection data from the Space Weather Database of Notifications, Knowledge, Information (DONKI). Solar flare characterisation and CME arrival prediction.</p>
+                <span class="ds-tag">LIVE // NASA API</span>
+            </div>
+        </div>
+        <div class="ds-card">
+            <div class="ds-dot"></div>
+            <div>
+                <h4>LAUNCH LIBRARY 2</h4>
+                <p>Comprehensive launch manifest tracking covering all global launch providers. Vehicle identification, payload manifesting, launch window predictions, and post-launch orbit insertion confirmation. Historical launch database for trend analysis.</p>
+                <span class="ds-tag">LIVE // LL2 API</span>
+            </div>
+        </div>
+        <div class="ds-card">
+            <div class="ds-dot"></div>
+            <div>
+                <h4>SPACEFLIGHT NEWS API</h4>
+                <p>Aggregated space industry news and reporting from verified sources. Automated keyword extraction and entity recognition for intelligence-relevant event detection. Launch reports, programme updates, and policy developments.</p>
+                <span class="ds-tag">LIVE // SNAPI</span>
+            </div>
+        </div>
+        <div class="ds-card">
+            <div class="ds-dot"></div>
+            <div>
+                <h4>CURATED INTELLIGENCE DATABASES</h4>
+                <p>Internally maintained databases of adversary satellite missions, ground station infrastructure, missile and ASAT system capabilities, and FVEY space architecture. Continuously updated from open-source defence and intelligence publications.</p>
+                <span class="ds-tag">INTERNAL // OSINT-DERIVED</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Whitepaper -->
+<hr class="section-divider">
+<section id="whitepaper" class="whitepaper-section">
+    <div class="section-label">// 03 WHITEPAPER</div>
+    <h2 class="section-title">STRATEGIC BRIEFING DOCUMENT</h2>
+    <p class="section-desc">
+        Full briefing document on the platform's strategic rationale,
+        threat environment analysis, and policy recommendations.
+    </p>
+
+    <div class="whitepaper-container">
+        <div class="wp-header">
+            <div class="wp-class">UNCLASSIFIED // OSINT // REL TO FVEY</div>
+            <h2>SPACE DOMAIN AWARENESS FOR THE FIVE EYES COMMUNITY:<br>AN OPEN-SOURCE INTELLIGENCE APPROACH</h2>
+            <div class="wp-meta">SecondMind Space Intelligence &mdash; Strategic Briefing &mdash; March 2026</div>
+        </div>
+
+        <div class="wp-body">
+
+            <h3>1. EXECUTIVE SUMMARY</h3>
+            <p>The space domain has transitioned from a benign operating environment characterised by great power restraint to an actively contested warfighting domain. The People's Republic of China (PRC), the Russian Federation, the Democratic People's Republic of Korea (DPRK), and the Islamic Republic of Iran have each developed or are developing capabilities designed to deny, degrade, or destroy the space-based systems upon which Five Eyes (FVEY) military operations and national security depend.</p>
+            <p>This document presents the case for an open-source intelligence (OSINT) approach to space domain awareness (SDA) that complements existing classified programmes. By leveraging publicly available orbital data, space weather feeds, launch tracking systems, and curated threat databases, the FVEY Space Domain Awareness Platform provides persistent, shareable situational awareness without the access restrictions, handling requirements, or dissemination constraints that limit the utility of classified SDA products.</p>
+            <p>The platform currently tracks over 800 adversary orbital assets across four threat nations, monitors counterspace programme developments, maps ground segment infrastructure, and generates automated strategic assessments. All data is unclassified and ITAR-free, enabling unrestricted sharing across all Five Eyes partner nations and potential extension to allied frameworks including NATO, AUKUS, and the Quad.</p>
+
+            <div class="wp-callout">
+                <p>KEY FINDING: The volume and quality of publicly available space data has reached a threshold where OSINT-based space domain awareness can provide operationally relevant intelligence products that complement — and in some use cases exceed — the timeliness of classified reporting chains.</p>
+            </div>
+
+            <h3>2. THE EVOLVING SPACE THREAT ENVIRONMENT</h3>
+            <p>The strategic space environment has undergone fundamental transformation over the past decade. What was once a domain defined by transparency, cooperative norms, and mutual restraint is now characterised by deliberate militarisation, counterspace weapons development, and the erosion of behavioural norms that sustained space stability since the Outer Space Treaty of 1967.</p>
+
+            <p><strong>People's Republic of China.</strong> The PRC operates the most rapidly expanding military space programme globally. The People's Liberation Army Strategic Support Force (PLASSF) — now reorganised under the Information Support Force — manages an integrated space, cyber, and electronic warfare architecture. PRC orbital assets include the Yaogan series of ISR satellites providing synthetic aperture radar (SAR) and electro-optical intelligence; the Shijian series used for technology demonstration including rendezvous and proximity operations (RPO); and the Beidou navigation constellation providing independent PNT capability. China's direct-ascent ASAT capability was demonstrated in the 2007 destruction of the FY-1C weather satellite, which generated over 3,400 pieces of trackable debris. More concerning are the PRC's co-orbital inspection programmes, including the SJ-17 and SJ-21 satellites, which have demonstrated the ability to approach, grapple, and relocate other objects in geostationary orbit. The PRC is also developing ground-based directed energy weapons capable of satellite dazzling and potentially blinding at low Earth orbit altitudes.</p>
+
+            <p><strong>Russian Federation.</strong> Russia maintains the second-largest military space constellation globally and has pursued counterspace capabilities across all domains. The Cosmos series includes dedicated ISR, ELINT, and SIGINT platforms. Russia's direct-ascent ASAT capability was demonstrated in November 2021 when a Nudol interceptor destroyed the Cosmos 1408 satellite, generating over 1,500 pieces of trackable debris in an orbit that directly threatened the International Space Station. Russia's Burevestnik programme includes co-orbital inspection vehicles that have conducted close-approach operations against FVEY space assets. The Peresvet ground-based laser system is assessed as capable of dazzling electro-optical reconnaissance satellites. Russian electronic warfare capabilities, including the Tirada-2 and Krasukha systems, provide satellite communications jamming at operational and strategic ranges. Russia's Luch/Olymp satellites have repeatedly manoeuvred near Western communications satellites in geostationary orbit in what NATO has characterised as intelligence-gathering operations.</p>
+
+            <p><strong>Democratic People's Republic of Korea.</strong> DPRK space capabilities remain limited but are assessed as having dual-use applicability to ballistic missile development and rudimentary space situational awareness. The Kwangmyongsong satellite programme has placed objects in orbit using Unha-series launch vehicles derived from the Taepodong ballistic missile family. While DPRK on-orbit capabilities are assessed as minimal, launch vehicle development provides ICBM technology maturation. DPRK has demonstrated GPS jamming capabilities affecting operations on the Korean Peninsula, indicating investment in electronic warfare against space-based systems.</p>
+
+            <p><strong>Islamic Republic of Iran.</strong> Iran's Safir and Simorgh launch vehicles have achieved orbital insertion, and the Islamic Revolutionary Guard Corps (IRGC) Aerospace Force operates the Noor military satellite constellation. While Iranian space capabilities remain nascent compared to PRC and Russian programmes, Iran's investment in space-based ISR and communications — combined with demonstrated ballistic missile technology and GPS spoofing capabilities employed against US military assets in the Persian Gulf region — represents a growing threat to space-based operations in the CENTCOM area of responsibility.</p>
+
+            <h3>3. CURRENT FVEY SPACE ARCHITECTURE VULNERABILITIES</h3>
+            <p>Five Eyes space architectures were designed and deployed during an era when the space domain was considered a sanctuary. The resulting systems exhibit structural vulnerabilities that adversary counterspace programmes are specifically designed to exploit.</p>
+
+            <ul>
+                <li><strong>Constellation concentration.</strong> Critical national security functions — including missile warning, nuclear command and control, ISR, SIGINT, and PNT — are provided by small numbers of high-value assets in predictable orbits. The loss of even a small number of these assets would create significant capability gaps with no near-term reconstitution options.</li>
+                <li><strong>GEO dependency.</strong> Key missile warning (SBIRS/OPIR) and communications (WGS, Milstar/AEHF) systems operate in geostationary orbit, where orbital mechanics make them predictable targets and where replacement timelines are measured in years, not months.</li>
+                <li><strong>Ground segment exposure.</strong> Satellite operations centres, ground terminals, and TT&C stations represent single points of failure that are vulnerable to kinetic, cyber, and electronic attack. Many ground nodes are located in fixed, known locations with limited redundancy.</li>
+                <li><strong>Supply chain vulnerabilities.</strong> Space system manufacturing relies on extended, complex supply chains with limited surge capacity. The ability to rapidly reconstitute space capabilities following an adversary first-strike campaign is severely constrained by production timelines for satellite buses, payloads, and launch vehicles.</li>
+                <li><strong>Cross-domain dependencies.</strong> Military and intelligence operations across all domains — air, land, maritime, and cyber — depend on space-based services. Degradation of space capabilities produces cascading effects that reduce joint force effectiveness disproportionately to the number of assets lost.</li>
+                <li><strong>Classification barriers to sharing.</strong> Much existing space domain awareness is derived from classified sources and methods, limiting the speed and breadth of information sharing between FVEY partners and preventing dissemination to wider allied frameworks when strategically advantageous.</li>
+            </ul>
+
+            <h3>4. THE CASE FOR OSINT-BASED SPACE DOMAIN AWARENESS</h3>
+            <p>The maturation of publicly available space data sources creates an opportunity to establish a complementary SDA capability that addresses several limitations of classified-only approaches.</p>
+
+            <p>The publicly available space object catalogue, maintained by CelesTrak and derived from the US Space Command catalogue, provides general perturbations (GP) element sets for over 48,000 tracked objects. While these data lack the precision of special perturbations (SP) ephemerides available through classified channels, GP elements are sufficient for general orbit characterisation, regime classification, manoeuvre detection at the delta-v threshold of approximately 1 m/s, and conjunction screening at operationally useful confidence levels.</p>
+
+            <p>Open-source space weather data from NOAA's Space Weather Prediction Center provides the same solar and geomagnetic indices used by military space weather organisations, enabling accurate assessment of environmental impacts on satellite operations, communications, and PNT accuracy. NASA's DONKI database provides CME propagation models and solar flare characterisations that directly support operational planning.</p>
+
+            <p>The principal advantages of an OSINT-based approach include:</p>
+            <ul>
+                <li><strong>Unrestricted sharing.</strong> OSINT products can be shared across all FVEY partners without caveats, compartmentation, or access restrictions. This enables working-level analysts and operational planners to access space domain awareness without requiring TS/SCI clearances or access to classified networks.</li>
+                <li><strong>Speed of dissemination.</strong> OSINT products do not require classification review, foreign disclosure assessment, or tearline preparation. Intelligence can move from collection to consumption in minutes rather than the hours or days typical of classified reporting chains.</li>
+                <li><strong>Extended sharing.</strong> OSINT-based SDA products can be shared with non-FVEY allies, coalition partners, and commercial space operators without foreign disclosure concerns, enabling broader space domain awareness across allied frameworks.</li>
+                <li><strong>Resilience.</strong> OSINT collection does not depend on classified sensors or networks that may themselves be targets in a conflict scenario. Data sources are commercially hosted, globally distributed, and not susceptible to the same targeting calculus as national technical means.</li>
+                <li><strong>Cost efficiency.</strong> OSINT-based SDA operates at a fraction of the cost of classified programmes, enabling broader deployment and reducing barriers to entry for smaller FVEY partners.</li>
+            </ul>
+
+            <div class="wp-callout">
+                <p>OSINT does not replace classified intelligence — it provides a shareable, resilient, and rapidly disseminable complement that ensures space domain awareness persists even when classified systems or networks are degraded.</p>
+            </div>
+
+            <h3>5. PLATFORM CAPABILITIES AND METHODOLOGY</h3>
+            <p>The FVEY Space Domain Awareness Platform integrates multiple OSINT data streams into a unified operational picture. The platform architecture is designed around five core functions:</p>
+
+            <p><strong>Orbital Tracking and Cataloguing.</strong> The platform ingests GP element sets from CelesTrak and propagates orbits using SGP4/SDP4 algorithms to provide current and predicted satellite positions. Adversary assets are automatically classified by owner/operator, orbital regime, and assessed mission type based on orbital parameters, launch history, and cross-reference with open-source order-of-battle databases. The system maintains persistent tracking of 800+ adversary assets across PRC, Russian, DPRK, and Iranian constellations.</p>
+
+            <p><strong>Counterspace Threat Assessment.</strong> Adversary counterspace capabilities are catalogued and assessed based on open-source reporting, demonstrated tests, doctrinal publications, and technical analysis. The platform maintains a counterspace threat database that maps specific adversary systems against FVEY space architecture to identify vulnerability-threat pairs and prioritise protection efforts.</p>
+
+            <p><strong>Ground Infrastructure Mapping.</strong> Adversary and FVEY ground segment infrastructure is geolocated and characterised using open-source imagery, facility descriptions, and operational reporting. Ground station coverage is computed against satellite orbital parameters to identify contact windows, coverage gaps, and potential targeting considerations.</p>
+
+            <p><strong>Strategic Assessment Generation.</strong> The platform generates automated strategic assessments by correlating across multiple data streams. Threat level evaluations, trend analyses, and capability assessments are produced in standardised formats designed for integration into existing FVEY intelligence reporting frameworks.</p>
+
+            <p><strong>Space Weather Operations.</strong> Real-time space weather monitoring provides operational impact assessment for satellite communications, PNT accuracy, radar performance, and HF propagation. Solar event tracking and geomagnetic storm forecasting enable proactive operations planning and anomaly attribution — distinguishing environmental effects from adversary interference.</p>
+
+            <h3>6. DATA SOURCES AND COLLECTION APPROACH</h3>
+            <p>All platform data is derived from publicly available, unclassified sources. No classified data, controlled unclassified information (CUI), or export-controlled technical data is ingested, processed, or stored by the system.</p>
+
+            <p>Primary data sources include CelesTrak for orbital element sets covering the complete unclassified catalogue including active satellites, debris, and special-interest objects; the NOAA Space Weather Prediction Center for real-time geomagnetic indices, solar wind parameters, and space weather alerts; NASA's Near Earth Object programme and DONKI database for planetary defence data and solar event characterisation; Launch Library 2 for comprehensive global launch tracking and manifest data; and the Spaceflight News API for aggregated space industry reporting.</p>
+
+            <p>Internal databases are maintained for adversary satellite mission characterisations based on published analyses from the Union of Concerned Scientists, the Secure World Foundation, and national space agency publications; ground station locations derived from openly published facility information, satellite imagery analysis, and frequency coordination filings; and missile and ASAT system technical parameters drawn from defence publication reporting, government testimony, and think tank assessments.</p>
+
+            <p>Data integrity is maintained through automated cross-referencing between sources, anomaly detection algorithms that flag unexpected orbital changes or data discontinuities, and manual review of intelligence assessments before publication. All source attribution is maintained to enable consumer evaluation of intelligence confidence levels.</p>
+
+            <h3>7. POLICY RECOMMENDATIONS FOR FVEY PARTNERS</h3>
+            <p>Based on the threat environment analysis and platform operational experience, the following policy recommendations are offered for Five Eyes partner consideration:</p>
+
+            <ul>
+                <li><strong>Institutionalise OSINT-based SDA.</strong> FVEY partners should formally integrate OSINT-based space domain awareness into their intelligence architectures as a complement to classified programmes. This requires establishing OSINT SDA as a recognised intelligence discipline with dedicated analysts, defined production requirements, and integration into existing dissemination frameworks.</li>
+                <li><strong>Establish common OSINT SDA standards.</strong> The Five Eyes community should develop shared standards for OSINT-based space domain awareness products, including common data formats, threat assessment methodologies, and reporting templates. Standardisation enables interoperability and reduces duplication of effort across partner nations.</li>
+                <li><strong>Extend SDA sharing beyond FVEY.</strong> OSINT-based SDA products should be leveraged to extend space domain awareness to allied frameworks including NATO, AUKUS technology-sharing arrangements, the Quad, and bilateral defence partnerships. The unclassified nature of OSINT products removes the primary barrier to broader sharing.</li>
+                <li><strong>Invest in space resilience.</strong> The structural vulnerabilities identified in Section 3 require urgent investment in disaggregated architectures, proliferated constellations, rapid reconstitution capabilities, and multi-orbit redundancy. OSINT-based SDA provides the shareable threat assessment foundation upon which resilience investment cases can be built.</li>
+                <li><strong>Develop counterspace response options.</strong> FVEY partners should develop coordinated response options for counterspace attacks that are informed by shared, real-time space domain awareness. OSINT-based SDA provides the common operational picture necessary for coordinated allied responses.</li>
+                <li><strong>Support responsible space behaviour norms.</strong> OSINT-based SDA provides the transparency necessary to support development of norms of responsible behaviour in space. Publicly shareable data on close approaches, debris-generating events, and threatening manoeuvres strengthens diplomatic efforts to establish space governance frameworks.</li>
+                <li><strong>Leverage Australian strategic geography.</strong> Australia's geographic position provides unique advantages for space domain awareness, including ground station coverage of southern hemisphere orbital arcs, access to the Indo-Pacific launch corridor monitoring, and hosting arrangements for allied space surveillance assets. Australian OSINT SDA capabilities complement existing investments in the Joint Space Domain Awareness programme and the Space Surveillance Telescope relocated to Exmouth, Western Australia.</li>
+            </ul>
+
+            <h3>8. CONCLUSION</h3>
+            <p>The space domain is no longer a sanctuary. Adversary counterspace programmes have matured to the point where the space-based systems upon which Five Eyes military and intelligence operations depend are under credible, demonstrated threat. The response to this threat environment requires not only investment in classified space protection capabilities but also the development of shareable, resilient, and rapidly disseminable space domain awareness that can inform decision-making across the alliance.</p>
+
+            <p>Open-source intelligence provides a proven, cost-effective, and operationally relevant approach to space domain awareness that complements classified programmes while addressing their inherent limitations in sharing, timeliness, and resilience. The volume and quality of publicly available space data has reached a maturity threshold where OSINT-based SDA can deliver genuine intelligence value to military planners, policy makers, and operational commanders across the Five Eyes community.</p>
+
+            <p>The FVEY Space Domain Awareness Platform demonstrates that an Australian-developed, OSINT-based approach can provide persistent monitoring of the adversary space threat, automated strategic assessments, and a common operational picture shareable across all Five Eyes partners without restriction. As the space threat environment continues to evolve, platforms of this nature will become essential components of allied space domain awareness architectures.</p>
+
+            <div class="wp-callout">
+                <p>SecondMind Space Intelligence is an Australian-owned company committed to providing the Five Eyes community with world-class space domain awareness capabilities. For further information, partnership enquiries, or capability demonstrations, contact via secondmindhq.com.</p>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- About -->
+<hr class="section-divider">
+<section id="about">
+    <div class="section-label">// 04 ABOUT</div>
+    <h2 class="section-title">ABOUT SECONDMIND SPACE INTELLIGENCE</h2>
+
+    <div class="about-grid">
+        <div class="about-text">
+            <p>SecondMind Space Intelligence is an Australian-owned company building space domain awareness tools for the Five Eyes intelligence and defence community. Our platform provides persistent, unclassified space situational awareness derived entirely from open-source intelligence.</p>
+            <p>Our approach is deliberately OSINT-first. By building on publicly available data sources and maintaining strict separation from classified systems, we deliver a space domain awareness capability that can be shared without restriction across all FVEY partner nations and extended to allied frameworks including AUKUS, NATO, and the Quad.</p>
+            <p>No ITAR. No classification handling. No foreign disclosure barriers. Just operational intelligence, available to every analyst who needs it.</p>
+
+            <div class="about-badge">
+                <span class="flag">&#127462;&#127482;</span>
+                <span class="badge-text">PROUDLY AUSTRALIAN</span>
+            </div>
+        </div>
+
+        <ul class="about-points">
+            <li>
+                <span class="ap-label">OWNERSHIP</span>
+                <span class="ap-value">Australian-owned and operated. Registered under Australian Business Number (ABN).</span>
+            </li>
+            <li>
+                <span class="ap-label">DOMAIN</span>
+                <span class="ap-value">secondmindhq.com</span>
+            </li>
+            <li>
+                <span class="ap-label">CLASSIFICATION</span>
+                <span class="ap-value">All platform data is UNCLASSIFIED. No classified data is ingested, processed, or stored.</span>
+            </li>
+            <li>
+                <span class="ap-label">ITAR STATUS</span>
+                <span class="ap-value">ITAR-free. No US export-controlled technical data. No Munitions List items. Fully deployable to all FVEY partners.</span>
+            </li>
+            <li>
+                <span class="ap-label">PARTNERS</span>
+                <span class="ap-value">Built for FVEY: Australia, United States, United Kingdom, Canada, New Zealand.</span>
+            </li>
+            <li>
+                <span class="ap-label">STACK</span>
+                <span class="ap-value">Python / FastAPI backend. Pure JavaScript frontend. No framework dependencies. Lightweight, auditable, deployable to air-gapped environments with cached data.</span>
+            </li>
+        </ul>
+    </div>
+</section>
+
+<!-- Footer -->
+<div class="footer">
+    <p>&copy; 2026 SecondMind Space Intelligence. Australian-owned. All rights reserved.</p>
+    <p>ABN registered &mdash; secondmindhq.com</p>
+    <p style="margin-top: 16px; color: #444;">UNCLASSIFIED // OSINT // REL TO FVEY</p>
+</div>
+<div class="footer-banner">UNCLASSIFIED // OSINT // REL TO FVEY</div>
+
+</body>
+</html>
