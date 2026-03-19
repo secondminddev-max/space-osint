@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ECHELON VANTAGE // FVEY SPACE DOMAIN AWARENESS</title>
-    <meta name="description" content="Echelon Vantage — Real-time space domain awareness and counterspace threat intelligence for the Five Eyes community">
+    <meta name="description" content="Echelon Vantage — Real-time space domain awareness and counterspace threat intelligence for the Five Eyes community. 103 API endpoints, 30 intel modules, AI-powered deductions.">
+    <meta name="robots" content="noindex">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#9678;</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=12">
+    <link rel="stylesheet" href="/static/css/style.css?v=13">
 </head>
 <body>
 
-<!-- Classification Banner -->
+<!-- Classification Banner — Top -->
 <div id="class-banner">UNCLASSIFIED // OSINT // REL TO FVEY</div>
 
 <!-- Tab Bar -->
@@ -24,21 +25,24 @@
         <div class="sys-title">ECHELON VANTAGE</div>
     </div>
     <div class="tab-group-center">
+        <!-- Operations -->
         <div class="tab active" data-page="cmd">CMD</div>
         <div class="tab" data-page="adversary">ADVERSARY</div>
         <div class="tab" data-page="orbital">ORBITAL</div>
         <div class="tab" data-page="launches">LAUNCH</div>
         <div class="tab" data-page="ground">GROUND</div>
         <div class="tab" data-page="missile">ASAT</div>
-        <div class="tab" data-page="fvey">FVEY</div>
-        <div class="tab" data-page="strategy">STRATEGY</div>
+        <!-- Analysis -->
         <div class="tab" data-page="overmatch">OVERMATCH</div>
         <div class="tab" data-page="wargame">WARGAME</div>
+        <div class="tab" data-page="strategy">STRATEGY</div>
+        <!-- Reference -->
+        <div class="tab" data-page="fvey">FVEY</div>
         <div class="tab" data-page="incidents">INCIDENTS</div>
         <div class="tab" data-page="futures">FUTURES</div>
         <div class="tab" data-page="conferences">FORUMS</div>
-        <div class="tab" data-page="architecture">ARCHITECTURE</div>
-        <div class="tab" data-page="environment">ENVIRONMENT</div>
+        <div class="tab" data-page="architecture">ARCH</div>
+        <div class="tab" data-page="environment">ENV</div>
     </div>
     <div class="tab-group-right">
         <span class="sys-indicator"><span class="dot-live"></span> FEEDS ACTIVE</span>
@@ -53,6 +57,7 @@
     <span class="status-cell"><span class="sl-label">FEEDS</span> <span class="sl-val" id="feed-status">SYNCING</span></span>
     <span class="status-cell"><span class="sl-label">DATE</span> <span class="sl-val" id="utc-date">----/--/--</span></span>
     <span class="status-cell"><span class="sl-label">EPOCH</span> <span class="sl-val" id="epoch-time">----------</span></span>
+    <span class="status-cell"><span class="sl-label">VER</span> <span class="sl-val">12.0</span></span>
 </div>
 
 <!-- Main Content Area -->
@@ -66,10 +71,10 @@
 <!-- Scanline Overlay -->
 <div id="scanline-overlay"></div>
 
-<script src="/static/js/charts.js?v=12"></script>
-<script src="/static/js/satellite.js?v=12"></script>
-<script src="/static/js/pages.js?v=12"></script>
-<script src="/static/js/app.js?v=12"></script>
+<script src="/static/js/charts.js?v=13"></script>
+<script src="/static/js/satellite.js?v=13"></script>
+<script src="/static/js/pages.js?v=13"></script>
+<script src="/static/js/app.js?v=13"></script>
 
 </body>
 </html>

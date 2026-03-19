@@ -712,12 +712,32 @@ async def api_sigint_composite():
 @app.get("/api/status")
 async def api_status():
     return JSONResponse({
-        "service": "ECHELON VANTAGE — Space Domain Awareness",
+        "service": "ECHELON VANTAGE",
         "status": "operational",
-        "version": "7.0.0",
+        "version": "12.0.0",
         "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
         "operator": "Echelon Vantage Pty Ltd — Australia",
-        "capabilities": 83,
+        "api_endpoints": 103,
+        "modules": 30,
+        "tabs": 15,
+    })
+
+
+@app.get("/api/capabilities")
+async def api_capabilities():
+    return JSONResponse({
+        "platform": "ECHELON VANTAGE — FVEY Space Domain Awareness",
+        "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
+        "version": "12.0.0",
+        "operator": "Echelon Vantage Pty Ltd — Australia",
+        "fvey_partners": ["Australia", "United States", "United Kingdom", "Canada", "New Zealand"],
+        "itar_status": "ITAR-free — all intelligence derived from open sources",
+        "statistics": {
+            "api_endpoints": 103, "backend_modules": 30, "dashboard_tabs": 15,
+            "lines_of_code": 32262, "adversary_sats": "800+", "asat_systems": 33,
+            "ground_stations": 63, "wargame_scenarios": 7, "future_programs": 45,
+            "incidents": 17, "conferences": 25, "contested_zones": 6, "live_feeds": "20+",
+        },
     })
 
 
