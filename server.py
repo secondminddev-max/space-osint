@@ -26,6 +26,7 @@ from data_sources import (
     deduction_engine,
     final_features,
     global_feeds,
+    sigint_feeds,
 )
 
 _client: httpx.AsyncClient = None
@@ -673,6 +674,39 @@ async def api_global_all():
     return JSONResponse(await global_feeds.fetch_global_composite(_client))
 
 
+# ---- Multi-Source SIGINT & Advanced Intelligence ----
+
+@app.get("/api/sigint/satnogs")
+async def api_sigint_satnogs():
+    """SatNOGS satellite RF observations — global amateur ground station network."""
+    return JSONResponse(await sigint_feeds.fetch_satnogs_observations(_client))
+
+@app.get("/api/sigint/thermal")
+async def api_sigint_thermal():
+    """NASA FIRMS thermal anomaly detection — rocket launch site monitoring."""
+    return JSONResponse(await sigint_feeds.fetch_thermal_anomalies(_client))
+
+@app.get("/api/sigint/seismic")
+async def api_sigint_seismic():
+    """USGS seismic events — nuclear test and ASAT test site correlation."""
+    return JSONResponse(await sigint_feeds.fetch_seismic_events(_client))
+
+@app.get("/api/sigint/ionosphere")
+async def api_sigint_ionosphere():
+    """Ionospheric TEC monitoring — GPS degradation and HEMP detection."""
+    return JSONResponse(await sigint_feeds.fetch_ionospheric_tec(_client))
+
+@app.get("/api/sigint/events")
+async def api_sigint_events():
+    """NASA EONET natural events — operational impact on space infrastructure."""
+    return JSONResponse(await sigint_feeds.fetch_natural_events(_client))
+
+@app.get("/api/sigint/composite")
+async def api_sigint_composite():
+    """Multi-source SIGINT composite — cross-correlated intelligence from all feeds."""
+    return JSONResponse(await sigint_feeds.get_multi_source_intel(_client))
+
+
 # ---- System ----
 
 @app.get("/api/status")
@@ -680,10 +714,10 @@ async def api_status():
     return JSONResponse({
         "service": "ECHELON VANTAGE — Space Domain Awareness",
         "status": "operational",
-        "version": "6.0.0",
+        "version": "7.0.0",
         "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
         "operator": "Echelon Vantage Pty Ltd — Australia",
-        "capabilities": 77,
+        "capabilities": 83,
     })
 
 
