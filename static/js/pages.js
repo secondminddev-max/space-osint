@@ -400,7 +400,7 @@ Pages.cmd = async function (el) {
             <div style="font-size:9px;color:var(--text);line-height:1.5;margin-bottom:4px">${(data.assessment || '').substring(0, 180)}${(data.assessment || '').length > 180 ? '...' : ''}</div>
             ${events.slice(0, 4).map(e => `
                 <div style="padding:2px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:9px">
-                    ${badge(e.severity || 'medium')} <span style="color:var(--white)">${e.event}</span>
+                    ${badge(e.severity || 'medium')} <span style="color:var(--white)">${e.description || e.event || e.title || ''}</span>
                 </div>
             `).join('')}
             <div style="font-size:7px;color:var(--text-muted);margin-top:3px">${data.timestamp ? timeAgo(data.timestamp) : zulu()}</div>`;
