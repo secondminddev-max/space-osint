@@ -2451,3 +2451,286 @@ body {
     .key-threat-banner { flex-wrap: wrap; }
     .conf-next-date { margin-left: 0; }
 }
+
+
+/* ================================================================
+   ENVIRONMENT PAGE — Space Weather Dashboard
+   ================================================================ */
+
+/* ---- Status Strip (top bar on environment page) ---- */
+.env-status-strip {
+    display: flex;
+    gap: 1px;
+    background: rgba(255,176,0,0.05);
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+.env-status-cell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 6px;
+    background: var(--bg);
+    text-align: center;
+}
+
+.env-status-val {
+    font-size: 16px;
+    color: var(--white);
+    line-height: 1.2;
+}
+
+.env-status-lbl {
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ---- Solar Imagery Grid ---- */
+.solar-img-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.solar-img-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+
+.solar-img-panel:hover {
+    border-color: var(--border-bright);
+}
+
+.solar-img-label {
+    padding: 4px 8px;
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+    background: rgba(255,176,0,0.03);
+    border-bottom: 1px solid var(--border);
+}
+
+.solar-img-panel img {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #111;
+    min-height: 100px;
+}
+
+/* ---- Environment Section ---- */
+.env-section {
+    margin-bottom: 4px;
+}
+
+.env-section-head {
+    padding: 4px 8px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--amber);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,176,0,0.02);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.env-section-body {
+    padding: 6px 8px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-top: none;
+}
+
+/* ---- Aurora Images Side-by-Side ---- */
+.aurora-img-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+.aurora-img-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.aurora-img-panel img {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #111;
+    min-height: 80px;
+}
+
+/* ---- Flare Prob Bars ---- */
+.flare-prob-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,176,0,0.04);
+}
+
+.flare-prob-row:last-child {
+    border-bottom: none;
+}
+
+.flare-prob-label {
+    font-size: 10px;
+    color: var(--text);
+    min-width: 80px;
+    letter-spacing: 0.5px;
+}
+
+.flare-prob-track {
+    flex: 1;
+    height: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,176,0,0.06);
+    overflow: hidden;
+}
+
+.flare-prob-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.flare-prob-val {
+    font-size: 11px;
+    color: var(--white);
+    min-width: 36px;
+    text-align: right;
+}
+
+/* ---- Active Region Table ---- */
+.env-region-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9px;
+}
+
+.env-region-table th {
+    text-align: left;
+    padding: 3px 5px;
+    font-size: 7px;
+    font-weight: normal;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+}
+
+.env-region-table td {
+    padding: 3px 5px;
+    font-size: 9px;
+    border-bottom: 1px solid rgba(255,176,0,0.04);
+    color: var(--text);
+}
+
+/* ---- Kp Forecast Bar Strip ---- */
+.kp-forecast-strip {
+    display: flex;
+    gap: 1px;
+    align-items: flex-end;
+    height: 80px;
+    padding-bottom: 2px;
+}
+
+.kp-forecast-bar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+}
+
+.kp-forecast-bar-fill {
+    width: 100%;
+    min-width: 8px;
+    transition: height 0.3s ease;
+}
+
+.kp-forecast-bar-label {
+    font-size: 6px;
+    color: var(--text-muted);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+}
+
+/* ---- ENLIL Status Card ---- */
+.enlil-status-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+}
+
+.enlil-status-val {
+    font-size: 20px;
+    font-family: var(--font);
+    min-width: 50px;
+    text-align: center;
+}
+
+.enlil-status-detail {
+    flex: 1;
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+/* ---- Debris / New Objects Table ---- */
+.debris-obj-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,176,0,0.04);
+    font-size: 9px;
+}
+
+.debris-obj-row:last-child {
+    border-bottom: none;
+}
+
+/* ---- Proton Alert Highlight ---- */
+.proton-alert-active {
+    background: rgba(255,32,32,0.06);
+    border: 1px solid rgba(255,32,32,0.2);
+    border-left: 3px solid var(--red);
+    padding: 6px 10px;
+    color: var(--red);
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    animation: pulse-threat 3s ease-in-out infinite;
+}
+
+/* ---- Environment Page Responsive ---- */
+@media (max-width: 1200px) {
+    .solar-img-grid { grid-template-columns: repeat(2, 1fr); }
+    .env-status-strip { flex-wrap: wrap; }
+    .aurora-img-row { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+    .solar-img-grid { grid-template-columns: 1fr; }
+    .env-status-cell { padding: 5px 4px; }
+    .env-status-val { font-size: 12px; }
+}

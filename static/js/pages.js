@@ -299,6 +299,9 @@ Pages.cmd = async function (el) {
             '<div class="env-cell"><span class="env-lbl">SOLAR</span><span class="env-val" id="ov-ss">S0</span></div>' +
             '<div class="env-cell"><span class="env-lbl">GEOMAG</span><span class="env-val" id="ov-sg">G0</span></div>' +
             '<div class="env-cell"><span class="env-lbl">NEOs</span><span class="env-val" id="ov-neo">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">X-RAY</span><span class="env-val" id="ov-xray">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">AURORA</span><span class="env-val" id="ov-aurora">--</span></div>' +
+            '<div class="env-cell"><span class="env-lbl">PROTON</span><span class="env-val" id="ov-proton">--</span></div>' +
             '<div class="cmd-kp-chart-wrap"><canvas id="kp-chart" height="50"></canvas></div>' +
         '</div>' +
         '</div>';
@@ -605,6 +608,62 @@ Pages.cmd = async function (el) {
     }
     if (neo) document.getElementById('ov-neo').textContent = neo.length;
 
+    // --- Enhanced env bar fields (X-ray, Aurora, Proton) ---
+    function updateCmdEnvEnhanced(envData) {
+        if (!envData) return;
+        // X-ray level
+        var goesD = envData.goes_instruments || {};
+        var xrD = (goesD.xray || {}).latest || {};
+        var xrKeys = Object.keys(xrD);
+        if (xrKeys.length > 0) {
+            var firstXr = xrD[xrKeys[0]];
+            var fv = firstXr ? firstXr.flux : null;
+            var xrEl = document.getElementById('ov-xray');
+            if (xrEl && fv != null) {
+                var lvl = 'A';
+                var xc = 'var(--green)';
+                if (fv >= 1e-4) { lvl = 'X'; xc = 'var(--red)'; }
+                else if (fv >= 1e-5) { lvl = 'M'; xc = 'var(--cis)'; }
+                else if (fv >= 1e-6) { lvl = 'C'; xc = 'var(--amber)'; }
+                else if (fv >= 1e-7) { lvl = 'B'; xc = 'var(--green)'; }
+                xrEl.textContent = lvl;
+                xrEl.style.color = xc;
+            }
+        }
+        // Aurora max probability
+        var aurD = envData.aurora || {};
+        var aurEl = document.getElementById('ov-aurora');
+        if (aurEl && aurD.max_probability != null) {
+            aurEl.textContent = aurD.max_probability + '%';
+            aurEl.style.color = aurD.max_probability >= 50 ? 'var(--red)' : aurD.max_probability >= 25 ? 'var(--amber)' : 'var(--green)';
+        }
+        // Proton alert
+        var prD = (goesD.protons || {}).latest || {};
+        var prKeys = Object.keys(prD);
+        var prEl = document.getElementById('ov-proton');
+        if (prEl) {
+            var prStatus = 'OK';
+            var prColor = 'var(--green)';
+            for (var prI = 0; prI < prKeys.length; prI++) {
+                if (prKeys[prI].indexOf('10') >= 0) {
+                    var prFlux = prD[prKeys[prI]] ? prD[prKeys[prI]].flux : null;
+                    if (prFlux != null && prFlux >= 10) {
+                        prStatus = 'S1+';
+                        prColor = 'var(--red)';
+                    }
+                    break;
+                }
+            }
+            prEl.textContent = prStatus;
+            prEl.style.color = prColor;
+        }
+    }
+
+    // Initial fetch for enhanced env bar
+    api('/api/environment/enhanced').then(function(envData) {
+        updateCmdEnvEnhanced(envData);
+    });
+
     // --- MAP: Plot adversary & FVEY sats ---
     setTimeout(async function() {
         var satResults = await Promise.all([
@@ -732,6 +791,12 @@ Pages.cmd = async function (el) {
         if (freshLaunches) {
             advLaunches = freshLaunches.filter(function(l) { return isAdvLaunch(l); });
         }
+    }, 120000);
+
+    // --- AUTO-REFRESH: Enhanced env bar (X-ray, Aurora, Proton) every 120s ---
+    registerInterval(async function() {
+        var freshEnvData = await api('/api/environment/enhanced');
+        updateCmdEnvEnhanced(freshEnvData);
     }, 120000);
 };
 
@@ -2541,4 +2606,509 @@ Pages.architecture = async function(el) {
             renderArch(tab.dataset.arch);
         });
     });
+};
+
+
+/* ================================================================
+   PAGE 15: SPACE ENVIRONMENT MONITORING
+   Enhanced space weather, solar imagery, aurora, GOES, ENLIL,
+   debris awareness — all 10 new API endpoints
+   ================================================================ */
+Pages.environment = async function (el) {
+    el.innerHTML = '<div class="loading">LOADING SPACE ENVIRONMENT DATA</div>';
+
+    // Fetch the master composite endpoint — all data in one call
+    var env = await api('/api/environment/enhanced');
+
+    if (!env) {
+        el.innerHTML = '<div class="page-wrap"><div class="empty-state">ENVIRONMENT DATA UNAVAILABLE — RETRYING</div></div>';
+        return;
+    }
+
+    var goes = env.goes_instruments || {};
+    var aurora = env.aurora || {};
+    var geospace = env.geospace || {};
+    var forecasts = env.forecasts || {};
+    var solarAct = env.solar_activity || {};
+    var imagery = env.solar_imagery || {};
+    var enlil = env.enlil_model || {};
+    var debris = env.debris_awareness || {};
+
+    // ---- Derived values for status strip ----
+    var xrayLevel = '--';
+    var xrayColor = 'var(--green)';
+    var xrayData = goes.xray || {};
+    var xrayLatest = xrayData.latest || {};
+    var xrayKeys = Object.keys(xrayLatest);
+    if (xrayKeys.length > 0) {
+        var firstXray = xrayLatest[xrayKeys[0]];
+        var fluxVal = firstXray ? firstXray.flux : null;
+        if (fluxVal != null) {
+            if (fluxVal >= 1e-4) { xrayLevel = 'X'; xrayColor = 'var(--red)'; }
+            else if (fluxVal >= 1e-5) { xrayLevel = 'M'; xrayColor = 'var(--cis)'; }
+            else if (fluxVal >= 1e-6) { xrayLevel = 'C'; xrayColor = 'var(--amber)'; }
+            else if (fluxVal >= 1e-7) { xrayLevel = 'B'; xrayColor = 'var(--green)'; }
+            else { xrayLevel = 'A'; xrayColor = 'var(--green)'; }
+            xrayLevel += ' (' + fluxVal.toExponential(1) + ')';
+        }
+    }
+
+    var protonAlert = 'NOMINAL';
+    var protonColor = 'var(--green)';
+    var protonData = goes.protons || {};
+    var protonLatest = protonData.latest || {};
+    var protonKeys = Object.keys(protonLatest);
+    for (var pi = 0; pi < protonKeys.length; pi++) {
+        var pk = protonKeys[pi];
+        if (pk.indexOf('10') >= 0) {
+            var pFlux = protonLatest[pk] ? protonLatest[pk].flux : null;
+            if (pFlux != null && pFlux >= 10) {
+                protonAlert = 'S1+ STORM';
+                protonColor = 'var(--red)';
+            }
+            break;
+        }
+    }
+
+    var kpNext = '--';
+    var kpColor = 'var(--cyan)';
+    var kpEntries = (forecasts.kp_forecast || {}).entries || [];
+    if (kpEntries.length > 0) {
+        var kpVal = kpEntries[0].kp;
+        if (kpVal != null) {
+            kpNext = String(kpVal);
+            if (parseFloat(kpVal) >= 7) kpColor = 'var(--red)';
+            else if (parseFloat(kpVal) >= 5) kpColor = 'var(--cis)';
+            else if (parseFloat(kpVal) >= 4) kpColor = 'var(--amber)';
+            else kpColor = 'var(--green)';
+        }
+    }
+
+    var geoLatest = (geospace.latest || {});
+    var bzVal = geoLatest.bz != null ? geoLatest.bz : '--';
+    var bzColor = 'var(--green)';
+    if (typeof bzVal === 'number') {
+        bzColor = bzVal < -10 ? 'var(--red)' : bzVal < 0 ? 'var(--cis)' : 'var(--green)';
+        bzVal = bzVal.toFixed(1) + ' nT';
+    }
+
+    var windSpeed = geoLatest.speed != null ? Math.round(geoLatest.speed) + ' km/s' : '--';
+    var windColor = 'var(--cyan)';
+    if (geoLatest.speed != null) {
+        windColor = geoLatest.speed > 700 ? 'var(--red)' : geoLatest.speed > 500 ? 'var(--cis)' : 'var(--cyan)';
+    }
+
+    var auroraMax = aurora.max_probability != null ? aurora.max_probability + '%' : '--';
+    var auroraColor = 'var(--cyan)';
+    if (aurora.max_probability != null) {
+        auroraColor = aurora.max_probability >= 50 ? 'var(--red)' : aurora.max_probability >= 25 ? 'var(--amber)' : 'var(--green)';
+    }
+
+    // ==== BUILD HTML ====
+    var html = '<div class="page-wrap">';
+
+    // ---- STATUS STRIP ----
+    html += '<div class="env-status-strip">' +
+        '<div class="env-status-cell" style="border-left:2px solid ' + xrayColor + '">' +
+            '<div class="env-status-val" style="color:' + xrayColor + '">' + xrayLevel + '</div>' +
+            '<div class="env-status-lbl">X-RAY FLUX</div>' +
+        '</div>' +
+        '<div class="env-status-cell" style="border-left:2px solid ' + protonColor + '">' +
+            '<div class="env-status-val" style="color:' + protonColor + '">' + protonAlert + '</div>' +
+            '<div class="env-status-lbl">PROTON STATUS</div>' +
+        '</div>' +
+        '<div class="env-status-cell" style="border-left:2px solid ' + kpColor + '">' +
+            '<div class="env-status-val" style="color:' + kpColor + '">Kp ' + kpNext + '</div>' +
+            '<div class="env-status-lbl">Kp FORECAST</div>' +
+        '</div>' +
+        '<div class="env-status-cell" style="border-left:2px solid ' + bzColor + '">' +
+            '<div class="env-status-val" style="color:' + bzColor + '">' + bzVal + '</div>' +
+            '<div class="env-status-lbl">GEOSPACE Bz</div>' +
+        '</div>' +
+        '<div class="env-status-cell" style="border-left:2px solid ' + windColor + '">' +
+            '<div class="env-status-val" style="color:' + windColor + '">' + windSpeed + '</div>' +
+            '<div class="env-status-lbl">SOLAR WIND</div>' +
+        '</div>' +
+        '<div class="env-status-cell" style="border-left:2px solid ' + auroraColor + '">' +
+            '<div class="env-status-val" style="color:' + auroraColor + '">' + auroraMax + '</div>' +
+            '<div class="env-status-lbl">AURORA MAX</div>' +
+        '</div>' +
+        '</div>';
+
+    // ---- SECTION 1: SOLAR IMAGERY ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">SOLAR IMAGERY ' + liveIndicator('5M') + '</div>' +
+        '</div>';
+
+    var suvi = (imagery.suvi || {}).wavelengths || {};
+    var sdo = imagery.sdo_hmi || {};
+    var lascoC2 = imagery.lasco_c2 || {};
+    var lascoC3 = imagery.lasco_c3 || {};
+    var drap = imagery.drap || {};
+    var enlilImg = imagery.enlil || {};
+
+    html += '<div class="solar-img-grid">';
+
+    // SUVI images
+    var suviWaves = [
+        { wl: '094', label: 'SUVI 094 A (Fe XVIII 6.3 MK)' },
+        { wl: '171', label: 'SUVI 171 A (Fe IX 0.6 MK)' },
+        { wl: '304', label: 'SUVI 304 A (He II 0.05 MK)' },
+        { wl: '195', label: 'SUVI 195 A (Fe XII 1.6 MK)' }
+    ];
+
+    for (var si = 0; si < suviWaves.length; si++) {
+        var sw = suviWaves[si];
+        var imgUrl = suvi[sw.wl] || '';
+        html += '<div class="solar-img-panel">' +
+            '<div class="solar-img-label">' + sw.label + '</div>' +
+            (imgUrl ? '<img src="' + imgUrl + '" alt="' + sw.label + '" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+            '</div>';
+    }
+
+    // SDO/HMI Magnetogram
+    html += '<div class="solar-img-panel">' +
+        '<div class="solar-img-label">SDO/HMI MAGNETOGRAM</div>' +
+        (sdo.url ? '<img src="' + sdo.url + '" alt="SDO HMI" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+        '</div>';
+
+    // LASCO C2
+    html += '<div class="solar-img-panel">' +
+        '<div class="solar-img-label">LASCO C2 (2-6 Rs)</div>' +
+        (lascoC2.url ? '<img src="' + lascoC2.url + '" alt="LASCO C2" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+        '</div>';
+
+    // LASCO C3
+    html += '<div class="solar-img-panel">' +
+        '<div class="solar-img-label">LASCO C3 (3.7-30 Rs)</div>' +
+        (lascoC3.url ? '<img src="' + lascoC3.url + '" alt="LASCO C3" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+        '</div>';
+
+    // D-RAP
+    html += '<div class="solar-img-panel">' +
+        '<div class="solar-img-label">D-RAP HF ABSORPTION</div>' +
+        (drap.url ? '<img src="' + drap.url + '" alt="D-RAP" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+        '</div>';
+
+    html += '</div>'; // end solar-img-grid
+
+    // ---- SECTION 2: GOES INSTRUMENT DATA ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">GOES INSTRUMENT DATA ' + liveIndicator('5M') + '</div>' +
+        '<div class="env-section-body" id="env-goes-body">';
+
+    html += '<div class="grid-2">';
+    // X-ray panel
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>X-RAY FLUX</h3></div><div class="panel-body">';
+    html += '<div style="font-size:10px;color:var(--text);line-height:1.6">';
+    html += '<div>CURRENT LEVEL: <span style="color:' + xrayColor + ';font-size:14px">' + xrayLevel + '</span></div>';
+    for (var xi = 0; xi < xrayKeys.length; xi++) {
+        var xk = xrayKeys[xi];
+        var xd = xrayLatest[xk];
+        html += '<div style="padding:2px 0;border-bottom:1px solid rgba(255,176,0,0.04)">' +
+            '<span style="color:var(--amber);font-size:8px;letter-spacing:1px">' + xk + '</span> ' +
+            '<span style="color:var(--white)">' + (xd && xd.flux != null ? xd.flux.toExponential(2) + ' W/m2' : '--') + '</span>' +
+            '</div>';
+    }
+    html += '</div></div></div>';
+
+    // Proton panel
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>PROTON FLUX</h3></div><div class="panel-body">';
+    if (protonAlert !== 'NOMINAL') {
+        html += '<div class="proton-alert-active">&#9888; PROTON EVENT: ' + protonAlert + '</div>';
+    }
+    html += '<div style="font-size:10px;color:var(--text);line-height:1.6">';
+    for (var pj = 0; pj < protonKeys.length; pj++) {
+        var ppk = protonKeys[pj];
+        var ppd = protonLatest[ppk];
+        html += '<div style="padding:2px 0;border-bottom:1px solid rgba(255,176,0,0.04)">' +
+            '<span style="color:var(--amber);font-size:8px;letter-spacing:1px">' + ppk + '</span> ' +
+            '<span style="color:var(--white)">' + (ppd && ppd.flux != null ? ppd.flux.toExponential(2) + ' pfu' : '--') + '</span>' +
+            '</div>';
+    }
+    html += '</div></div></div>';
+    html += '</div>'; // end grid-2
+
+    html += '</div></div>'; // end goes section
+
+    // ---- SECTION 3: SOLAR ACTIVITY ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">SOLAR ACTIVITY ' + liveIndicator('15M') + '</div>' +
+        '<div class="env-section-body">';
+
+    html += '<div class="grid-2">';
+
+    // Flare probabilities
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>FLARE PROBABILITIES (24h)</h3></div><div class="panel-body">';
+    var fProbs = (solarAct.flare_probabilities || {}).latest || {};
+    var probItems = [
+        { label: 'C-CLASS FLARE', val: fProbs.c_class_1d, color: 'var(--amber)' },
+        { label: 'M-CLASS FLARE', val: fProbs.m_class_1d, color: 'var(--cis)' },
+        { label: 'X-CLASS FLARE', val: fProbs.x_class_1d, color: 'var(--red)' },
+        { label: 'PROTON EVENT', val: fProbs.proton_1d, color: 'var(--nkor)' }
+    ];
+    for (var fi = 0; fi < probItems.length; fi++) {
+        var fp = probItems[fi];
+        var fpVal = fp.val != null ? fp.val : 0;
+        html += '<div class="flare-prob-row">' +
+            '<span class="flare-prob-label">' + fp.label + '</span>' +
+            '<div class="flare-prob-track">' +
+            '<div class="flare-prob-fill" style="width:' + fpVal + '%;background:' + fp.color + '"></div>' +
+            '</div>' +
+            '<span class="flare-prob-val" style="color:' + fp.color + '">' + fpVal + '%</span>' +
+            '</div>';
+    }
+    html += '</div></div>';
+
+    // Active regions
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>ACTIVE SUNSPOT REGIONS</h3><span class="ph-meta">' +
+        ((solarAct.active_regions || {}).count || 0) + ' REGIONS</span></div><div class="panel-body" style="max-height:200px">';
+    var regions = ((solarAct.active_regions || {}).regions || []);
+    if (regions.length > 0) {
+        html += '<table class="env-region-table"><thead><tr>' +
+            '<th>REGION</th><th>LOC</th><th>MAG</th><th>SPOTS</th><th>C%</th><th>M%</th><th>X%</th>' +
+            '</tr></thead><tbody>';
+        for (var ri = 0; ri < Math.min(regions.length, 15); ri++) {
+            var rg = regions[ri];
+            html += '<tr>' +
+                '<td style="color:var(--white)">' + (rg.region || '--') + '</td>' +
+                '<td>' + (rg.location || '--') + '</td>' +
+                '<td>' + (rg.mag_class || '--') + '</td>' +
+                '<td>' + (rg.num_spots != null ? rg.num_spots : '--') + '</td>' +
+                '<td>' + (rg.c_prob != null ? rg.c_prob : '--') + '</td>' +
+                '<td style="color:' + (rg.m_prob > 25 ? 'var(--cis)' : 'var(--text)') + '">' + (rg.m_prob != null ? rg.m_prob : '--') + '</td>' +
+                '<td style="color:' + (rg.x_prob > 5 ? 'var(--red)' : 'var(--text)') + '">' + (rg.x_prob != null ? rg.x_prob : '--') + '</td>' +
+                '</tr>';
+        }
+        html += '</tbody></table>';
+    } else {
+        html += '<div class="empty-state">NO ACTIVE REGIONS REPORTED</div>';
+    }
+    html += '</div></div>';
+
+    html += '</div>'; // end grid-2
+    html += '</div></div>'; // end solar activity section
+
+    // ---- SECTION 4: AURORA ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">AURORA FORECAST ' + liveIndicator('5M') +
+        '<span style="font-size:9px;color:' + auroraColor + '">MAX PROB: ' + auroraMax + '</span></div>' +
+        '<div class="env-section-body">';
+
+    var auroraImgN = (aurora.imagery || {}).north || '';
+    var auroraImgS = (aurora.imagery || {}).south || '';
+
+    html += '<div class="aurora-img-row">' +
+        '<div class="aurora-img-panel">' +
+        '<div class="solar-img-label">NORTHERN HEMISPHERE</div>' +
+        (auroraImgN ? '<img src="' + auroraImgN + '" alt="Aurora North" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+        '</div>' +
+        '<div class="aurora-img-panel">' +
+        '<div class="solar-img-label">SOUTHERN HEMISPHERE</div>' +
+        (auroraImgS ? '<img src="' + auroraImgS + '" alt="Aurora South" loading="lazy">' : '<div class="empty-state">NO IMAGE</div>') +
+        '</div>' +
+        '</div>';
+
+    if (aurora.intel_note) {
+        html += '<div class="intel-summary" style="margin-top:4px">' + aurora.intel_note + '</div>';
+    }
+
+    html += '</div></div>'; // end aurora section
+
+    // ---- SECTION 5: SPACE WEATHER FORECASTS ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">SPACE WEATHER FORECASTS ' + liveIndicator('15M') + '</div>' +
+        '<div class="env-section-body">';
+
+    html += '<div class="grid-2">';
+
+    // Kp forecast bar chart
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>Kp INDEX FORECAST</h3><span class="ph-meta">' + kpEntries.length + ' PERIODS</span></div><div class="panel-body">';
+    if (kpEntries.length > 0) {
+        html += '<div class="kp-forecast-strip">';
+        var maxBars = Math.min(kpEntries.length, 32);
+        for (var ki = 0; ki < maxBars; ki++) {
+            var ke = kpEntries[ki];
+            var kv = parseFloat(ke.kp) || 0;
+            var kpBarColor = kv >= 7 ? 'var(--red)' : kv >= 5 ? 'var(--cis)' : kv >= 4 ? 'var(--amber)' : 'var(--green)';
+            var kpBarH = Math.max(2, (kv / 9) * 100);
+            var kpTimeLabel = (ke.time || '').substring(5, 13).replace('T', ' ');
+            html += '<div class="kp-forecast-bar">' +
+                '<div class="kp-forecast-bar-fill" style="height:' + kpBarH + '%;background:' + kpBarColor + '"></div>' +
+                '<div class="kp-forecast-bar-label">' + kpTimeLabel + '</div>' +
+                '</div>';
+        }
+        html += '</div>';
+    } else {
+        html += '<div class="empty-state">NO Kp FORECAST DATA</div>';
+    }
+    html += '</div></div>';
+
+    // Electron fluence
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>ELECTRON FLUENCE FORECAST</h3></div><div class="panel-body">';
+    var eFluence = ((forecasts.electron_fluence || {}).entries || []);
+    if (eFluence.length > 0) {
+        html += '<table class="env-region-table"><thead><tr>' +
+            '<th>DATE</th><th>FLUENCE</th><th>DAY 2</th><th>DAY 3</th><th>SPEED</th>' +
+            '</tr></thead><tbody>';
+        for (var ei = 0; ei < Math.min(eFluence.length, 10); ei++) {
+            var ef = eFluence[ei];
+            html += '<tr>' +
+                '<td style="color:var(--white)">' + (ef.date || '--') + '</td>' +
+                '<td>' + (ef.fluence != null ? ef.fluence.toExponential(2) : '--') + '</td>' +
+                '<td>' + (ef.fluence_day2 != null ? ef.fluence_day2.toExponential(2) : '--') + '</td>' +
+                '<td>' + (ef.fluence_day3 != null ? ef.fluence_day3.toExponential(2) : '--') + '</td>' +
+                '<td>' + (ef.speed != null ? ef.speed : '--') + '</td>' +
+                '</tr>';
+        }
+        html += '</tbody></table>';
+    } else {
+        html += '<div class="empty-state">NO ELECTRON DATA</div>';
+    }
+    html += '</div></div>';
+
+    html += '</div>'; // end grid-2
+    html += '</div></div>'; // end forecasts section
+
+    // ---- SECTION 6: ENLIL MODEL ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">WSA-ENLIL SOLAR WIND MODEL ' + liveIndicator('1H') + '</div>' +
+        '<div class="env-section-body">';
+
+    var cmeCount = enlil.cme_arrivals_detected || 0;
+    var cmeArrivals = enlil.cme_arrivals || [];
+    var cmeColor = cmeCount > 0 ? 'var(--red)' : 'var(--green)';
+    var cmeLabel = cmeCount > 0 ? cmeCount + ' CME DETECTED' : 'NO CME DETECTED';
+
+    html += '<div class="enlil-status-card">' +
+        '<div class="enlil-status-val" style="color:' + cmeColor + '">' + cmeCount + '</div>' +
+        '<div class="enlil-status-detail">' +
+        '<div style="color:' + cmeColor + ';font-size:12px;letter-spacing:1px">' + cmeLabel + '</div>';
+
+    if (cmeArrivals.length > 0) {
+        html += '<div style="margin-top:4px">';
+        for (var ci = 0; ci < Math.min(cmeArrivals.length, 5); ci++) {
+            var ca = cmeArrivals[ci];
+            html += '<div style="padding:2px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:9px">' +
+                '<span style="color:var(--red)">&#9888;</span> ' +
+                '<span style="color:var(--white)">' + (ca.time || '--') + '</span> ' +
+                '<span style="color:var(--text-dim)">SPEED: ' + (ca.speed != null ? Math.round(ca.speed) + ' km/s' : '--') + '</span>' +
+                '</div>';
+        }
+        html += '</div>';
+    }
+
+    html += '<div style="font-size:8px;color:var(--text-muted);margin-top:4px">MODEL ENTRIES: ' + (enlil.entry_count || 0) + '</div>';
+    html += '</div></div>';
+
+    // ENLIL density image if available
+    var enlilFrames = (imagery.enlil || {}).frames || [];
+    if (enlilFrames.length > 0) {
+        html += '<div class="solar-img-panel" style="margin-top:4px">' +
+            '<div class="solar-img-label">ENLIL DENSITY MODEL (LATEST FRAME)</div>' +
+            '<img src="' + enlilFrames[enlilFrames.length - 1] + '" alt="ENLIL Density" loading="lazy" style="max-height:300px;object-fit:contain">' +
+            '</div>';
+    }
+
+    if (enlil.intel_note) {
+        html += '<div class="intel-summary" style="margin-top:4px">' + enlil.intel_note + '</div>';
+    }
+
+    html += '</div></div>'; // end ENLIL section
+
+    // ---- SECTION 7: DEBRIS AWARENESS ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">SPACE DEBRIS AWARENESS ' + liveIndicator('15M') + '</div>' +
+        '<div class="env-section-body">';
+
+    html += '<div class="grid-2">';
+
+    // New catalog objects
+    var newObj = (debris.new_catalog_objects || {});
+    var newObjList = newObj.objects || [];
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>NEW CATALOG OBJECTS (30d)</h3><span class="ph-meta">' +
+        (newObj.count || 0) + ' OBJECTS</span></div><div class="panel-body" style="max-height:200px">';
+    if (newObjList.length > 0) {
+        html += '<table class="env-region-table"><thead><tr>' +
+            '<th>NORAD</th><th>NAME</th><th>COUNTRY</th><th>TYPE</th><th>INC</th><th>LAUNCH</th>' +
+            '</tr></thead><tbody>';
+        for (var ni = 0; ni < Math.min(newObjList.length, 20); ni++) {
+            var no = newObjList[ni];
+            var countryStyle = '';
+            if (no.country === 'PRC') countryStyle = 'color:var(--red)';
+            else if (no.country === 'CIS') countryStyle = 'color:var(--cis)';
+            html += '<tr>' +
+                '<td style="color:var(--white)">' + (no.norad_id || '--') + '</td>' +
+                '<td>' + (no.name || '--').substring(0, 24) + '</td>' +
+                '<td style="' + countryStyle + '">' + (no.country || '--') + '</td>' +
+                '<td>' + (no.object_type || '--') + '</td>' +
+                '<td>' + (no.inclination != null ? Number(no.inclination).toFixed(1) : '--') + '</td>' +
+                '<td>' + (no.launch_date || '--') + '</td>' +
+                '</tr>';
+        }
+        html += '</tbody></table>';
+    } else {
+        html += '<div class="empty-state">NO NEW OBJECTS</div>';
+    }
+    html += '</div></div>';
+
+    // ICAO advisories
+    var icao = (debris.icao_space_weather || {});
+    var icaoList = icao.advisories || [];
+    html += '<div class="panel mb-2"><div class="panel-head"><h3>ICAO SPACE WEATHER ADVISORIES</h3><span class="ph-meta">' +
+        (icao.count || 0) + ' ADVISORIES</span></div><div class="panel-body" style="max-height:200px">';
+    if (icaoList.length > 0) {
+        for (var ii = 0; ii < icaoList.length; ii++) {
+            var adv = icaoList[ii];
+            html += '<div class="debris-obj-row">' +
+                '<span class="badge badge-high">' + (adv.severity || 'MOD') + '</span> ' +
+                '<span style="color:var(--white);flex:1">' + (adv.effect || '--') + '</span> ' +
+                '<span style="color:var(--text-dim);font-size:8px">' + (adv.dtg || '--') + '</span>' +
+                '</div>';
+        }
+    } else {
+        html += '<div class="empty-state">NO ACTIVE ADVISORIES</div>';
+    }
+    html += '</div></div>';
+
+    html += '</div>'; // end grid-2
+
+    // Particle alerts
+    var particleAlerts = (debris.particle_environment_alerts || {});
+    var pAlertList = particleAlerts.alerts || [];
+    if (pAlertList.length > 0) {
+        html += '<div class="panel mb-2"><div class="panel-head"><h3>PARTICLE ENVIRONMENT ALERTS</h3><span class="ph-meta" style="color:var(--red)">' +
+            pAlertList.length + ' ALERTS</span></div><div class="panel-body" style="max-height:150px">';
+        for (var pai = 0; pai < Math.min(pAlertList.length, 5); pai++) {
+            var pa = pAlertList[pai];
+            html += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,32,32,0.06);font-size:9px;color:var(--text)">' +
+                '<span style="color:var(--amber);font-size:7px;letter-spacing:1px">' + (pa.issue_datetime || '--') + '</span><br>' +
+                (pa.message || '').substring(0, 200) +
+                '</div>';
+        }
+        html += '</div></div>';
+    }
+
+    if (debris.intel_note) {
+        html += '<div class="intel-summary">' + debris.intel_note + '</div>';
+    }
+
+    html += '</div></div>'; // end debris section
+
+    // ---- TIMESTAMP ----
+    html += '<div style="text-align:center;padding:6px;font-size:8px;letter-spacing:2px;color:var(--text-muted)">' +
+        'ENVIRONMENT DATA COMPOSITE // UPDATED ' + zuluFull() + ' // AUTO-REFRESH 120S' +
+        '</div>';
+
+    html += '</div>'; // end page-wrap
+
+    el.innerHTML = html;
+
+    // ---- AUTO-REFRESH every 120s ----
+    registerInterval(async function() {
+        var freshEnv = await api('/api/environment/enhanced');
+        if (freshEnv) {
+            Pages.environment(el);
+        }
+    }, 120000);
 };
