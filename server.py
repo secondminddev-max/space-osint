@@ -49,6 +49,10 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 @app.get("/")
 async def root():
+    return FileResponse(os.path.join(static_dir, "landing.html"))
+
+@app.get("/app")
+async def dashboard():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
 @app.get("/landing")
@@ -239,10 +243,11 @@ async def api_intel_social():
 @app.get("/api/status")
 async def api_status():
     return JSONResponse({
-        "service": "SPACE OSINT — Global Operating Centre",
+        "service": "ECHELON VANTAGE — Space Domain Awareness",
         "status": "operational",
-        "version": "3.0.0",
-        "classification": "UNCLASSIFIED // OSINT",
+        "version": "4.0.0",
+        "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
+        "operator": "Echelon Vantage Pty Ltd — Australia",
     })
 
 
