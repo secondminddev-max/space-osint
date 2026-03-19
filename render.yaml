@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: space-osint
+    name: echelon-vantage
     runtime: python
     repo: https://github.com/secondminddev-max/space-osint
     plan: free
