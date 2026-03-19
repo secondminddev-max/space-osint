@@ -23,6 +23,7 @@ from data_sources import (
     enhanced_feeds,
     deep_analysis,
     advanced_intel,
+    deduction_engine,
 )
 
 _client: httpx.AsyncClient = None
@@ -565,6 +566,28 @@ async def api_treaties():
 async def api_spectrum():
     """Electromagnetic Spectrum Assessment — EW threats and natural environment."""
     return JSONResponse(await advanced_intel.get_spectrum_assessment(_client))
+
+
+# ---- AI Deduction Engine ----
+
+@app.get("/api/deductions")
+async def api_deductions(category: str = ""):
+    """AI Deduction Engine — all deductions, optionally filtered by category."""
+    if category:
+        return JSONResponse(
+            await deduction_engine.get_deductions_by_category(_client, category)
+        )
+    return JSONResponse(await deduction_engine.generate_deductions(_client))
+
+@app.get("/api/deductions/priority")
+async def api_deductions_priority():
+    """AI Deduction Engine — top 10 highest-priority deductions."""
+    return JSONResponse(await deduction_engine.get_priority_deductions(_client))
+
+@app.get("/api/deductions/narrative")
+async def api_deductions_narrative():
+    """AI Deduction Engine — cohesive analytical threat narrative document."""
+    return JSONResponse(await deduction_engine.generate_threat_narrative(_client))
 
 
 # ---- System ----

@@ -2077,6 +2077,25 @@ body {
     50% { opacity: 0.2; box-shadow: 0 0 2px var(--green); }
 }
 
+/* ---- live-dot alias for live-indicator-dot ---- */
+.live-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 4px var(--green), 0 0 8px var(--green);
+    animation: live-indicator-pulse 1.5s ease-in-out infinite;
+}
+
+/* ---- Last-updated timestamp label ---- */
+.last-updated-ts {
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-left: 6px;
+}
+
 /* ---- Hotspot Bars (CMD page) ---- */
 .hotspot-row {
     padding: 2px 0;

@@ -856,6 +856,7 @@ Pages.adversary = async function (el) {
         '<div class="threat-bar mb-2">' + barHtml +
             '<div class="tb-cell hostile"><div class="tb-icon">&#9673;</div><div><div class="tb-val">' + totalISR + '</div><div class="tb-lbl">TOTAL ISR</div></div></div>' +
             '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + totalAll + '</div><div class="tb-lbl">TOTAL HOSTILE</div></div></div>' +
+            '<div class="tb-cell"><div><div class="tb-val"><span class="live-indicator"><span class="live-dot"></span> LIVE</span></div><div class="tb-lbl">60S REFRESH <span id="adv-live-ts" class="last-updated-ts">' + zulu() + '</span></div></div></div>' +
         '</div>' +
         '<div class="country-tabs" id="adv-tabs">' + tabsHtml + '</div>' +
         '<div id="adv-detail"></div>' +
@@ -1036,6 +1037,47 @@ Pages.adversary = async function (el) {
             renderCountry(tab.dataset.country);
         });
     });
+
+    // --- AUTO-REFRESH: Adversary stats & satellite data every 60s ---
+    registerInterval(async function() {
+        var freshResults = await Promise.all([
+            api('/api/adversary/stats'),
+            api('/api/adversary/satellites?country=PRC'),
+            api('/api/adversary/satellites?country=CIS'),
+            api('/api/adversary/satellites?country=NKOR'),
+            api('/api/adversary/satellites?country=IRAN'),
+        ]);
+        var freshStats = freshResults[0];
+        if (freshStats) {
+            advStatsData = freshStats;
+            countries[0].stats = freshStats.PRC;
+            countries[1].stats = freshStats.CIS;
+            countries[2].stats = freshStats.NKOR;
+            countries[3].stats = freshStats.IRAN;
+        }
+        countries[0].sats = freshResults[1] || countries[0].sats;
+        countries[1].sats = freshResults[2] || countries[1].sats;
+        countries[2].sats = freshResults[3] || countries[2].sats;
+        countries[3].sats = freshResults[4] || countries[3].sats;
+
+        // Update threat bar counts
+        var freshTotalAll = 0;
+        var freshTotalISR = 0;
+        countries.forEach(function(c) {
+            freshTotalAll += (c.stats ? c.stats.total : 0) || (c.sats ? c.sats.length : 0);
+            freshTotalISR += (c.stats ? c.stats.military_isr : 0) || 0;
+        });
+
+        // Re-render active country detail
+        var activeTab = el.querySelector('.country-tab.active');
+        if (activeTab) {
+            renderCountry(activeTab.dataset.country);
+        }
+
+        // Update last-updated timestamp
+        var advTsEl = document.getElementById('adv-live-ts');
+        if (advTsEl) advTsEl.textContent = zulu();
+    }, 60000);
 };
 
 
@@ -1120,10 +1162,11 @@ Pages.orbital = async function (el) {
             '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + nav.length + '</div><div class="tb-lbl">PNT / NAV</div></div></div>' +
             '<div class="tb-cell info"><div class="tb-icon">&#9656;</div><div><div class="tb-val">' + comms.length + '</div><div class="tb-lbl">COMMS</div></div></div>' +
             '<div class="tb-cell info"><div class="tb-icon">&#9670;</div><div><div class="tb-val">' + other.length + '</div><div class="tb-lbl">OTHER</div></div></div>' +
+            '<div class="tb-cell"><div><div class="tb-val"><span class="live-indicator"><span class="live-dot"></span> LIVE</span></div><div class="tb-lbl">30S REFRESH <span id="orbital-live-ts" class="last-updated-ts">' + zulu() + '</span></div></div></div>' +
         '</div>' +
-        '<div class="regime-strip">' + regimeStripHtml + '</div>' +
+        '<div class="regime-strip" id="orbital-regime-strip">' + regimeStripHtml + '</div>' +
         '<div class="panel mb-2">' +
-            '<div class="panel-head"><h3>ADVERSARY ORBITAL ASSETS // GLOBAL VIEW</h3><span class="ph-meta">' + zulu() + ' | ' + allAdv.length + ' OBJECTS</span></div>' +
+            '<div class="panel-head"><h3>ADVERSARY ORBITAL ASSETS // GLOBAL VIEW</h3><span class="ph-meta"><span id="orbital-map-ts">' + zulu() + '</span> | <span id="orbital-obj-count">' + allAdv.length + '</span> OBJECTS</span></div>' +
             '<div class="panel-body" style="padding:0"><div id="orbital-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div>' +
         '</div>' +
         '<div class="grid-2 mb-2">' +
