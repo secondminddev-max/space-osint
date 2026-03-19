@@ -21,6 +21,8 @@ from data_sources import (
     overmatch, wargame,
     futures, conferences, architecture,
     enhanced_feeds,
+    deep_analysis,
+    advanced_intel,
 )
 
 _client: httpx.AsyncClient = None
@@ -491,6 +493,78 @@ async def api_enlil():
 async def api_enhanced_environment():
     """Master composite of ALL enhanced environmental data in one call."""
     return JSONResponse(await enhanced_feeds.get_enhanced_environment(_client))
+
+
+# ---- Deep Intelligence Analysis ----
+
+@app.get("/api/analysis/constellation/{name}")
+async def api_analysis_constellation(name: str):
+    """In-depth adversary constellation analysis — coverage, capability, countermeasures."""
+    result = await deep_analysis.analyze_constellation(_client, name)
+    if result is None:
+        return JSONResponse(
+            {
+                "error": f"Unknown constellation '{name}'",
+                "available": deep_analysis.get_available_constellations(),
+            },
+            status_code=404,
+        )
+    return JSONResponse(result)
+
+@app.get("/api/analysis/correlations")
+async def api_analysis_correlations():
+    """Threat correlation engine — cross-source intelligence notes."""
+    return JSONResponse(await deep_analysis.correlate_threats(_client))
+
+@app.get("/api/analysis/orbat")
+async def api_analysis_orbat():
+    """Space Order of Battle — formal ORBAT for all adversary nations."""
+    return JSONResponse(await deep_analysis.generate_orbat(_client))
+
+@app.get("/api/analysis/daily-summary")
+async def api_analysis_daily_summary():
+    """Daily intelligence summary — structured morning brief."""
+    return JSONResponse(await deep_analysis.generate_daily_summary(_client))
+
+
+# ---- Advanced Space Intelligence ----
+
+@app.get("/api/analysis/rpo-risks")
+async def api_rpo_risks():
+    """RPO Risk Monitor — adversary satellites in similar orbits to FVEY military assets."""
+    return JSONResponse(await advanced_intel.check_rpo_risks(_client))
+
+@app.get("/api/analysis/debris-cascade")
+async def api_debris_cascade(
+    altitude: float = Query(800, description="Intercept altitude in km"),
+    mass: float = Query(1000, description="Target satellite mass in kg"),
+):
+    """Debris Cascade Risk Calculator — ASAT event debris modeling and FVEY impact."""
+    return JSONResponse(advanced_intel.calculate_debris_cascade(altitude, mass))
+
+@app.get("/api/analysis/weather-impact")
+async def api_weather_impact():
+    """Space Weather Operational Impact — translates weather to FVEY ops impact."""
+    return JSONResponse(await advanced_intel.assess_space_weather_impact(_client))
+
+@app.get("/api/analysis/launch-windows")
+async def api_launch_windows(
+    site_lat: float = Query(40.96, description="Launch site latitude"),
+    site_lng: float = Query(100.28, description="Launch site longitude"),
+    target_orbit: str = Query("SSO", description="Target orbit: SSO, LEO, GEO, MEO, Molniya"),
+):
+    """Launch Window Predictor — adversary launch site orbital mechanics constraints."""
+    return JSONResponse(advanced_intel.predict_launch_windows(site_lat, site_lng, target_orbit))
+
+@app.get("/api/analysis/treaties")
+async def api_treaties():
+    """Treaty & Norms Tracker — space governance frameworks and FVEY positions."""
+    return JSONResponse(advanced_intel.get_treaty_status())
+
+@app.get("/api/analysis/spectrum")
+async def api_spectrum():
+    """Electromagnetic Spectrum Assessment — EW threats and natural environment."""
+    return JSONResponse(await advanced_intel.get_spectrum_assessment(_client))
 
 
 # ---- System ----
