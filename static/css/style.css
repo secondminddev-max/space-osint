@@ -1569,3 +1569,480 @@ body {
     .launch-hero-countdown { font-size: 18px; letter-spacing: 2px; }
     .strategy-threat-level { font-size: 18px; letter-spacing: 3px; }
 }
+
+
+/* ================================================================
+   OVERMATCH, WARGAME, INCIDENTS — New Page Styles
+   ================================================================ */
+
+/* ---- Live Pulse Indicator ---- */
+.live-pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--green);
+}
+
+.live-pulse::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green), 0 0 12px var(--green);
+    animation: live-blink 1.5s ease-in-out infinite;
+}
+
+@keyframes live-blink {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--green), 0 0 12px var(--green); }
+    50% { opacity: 0.3; box-shadow: 0 0 2px var(--green); }
+}
+
+.live-pulse.red { color: var(--red); }
+.live-pulse.red::before { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.live-pulse.amber { color: var(--amber); }
+.live-pulse.amber::before { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+/* ---- Overmatch Score Bar (centered at 0, -100 to +100) ---- */
+.overmatch-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.overmatch-bar-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text);
+    min-width: 56px;
+    text-align: right;
+}
+
+.overmatch-bar-track {
+    flex: 1;
+    height: 14px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,176,0,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.overmatch-bar-track::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,176,0,0.25);
+    z-index: 2;
+}
+
+.overmatch-bar-fill {
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    transition: all 0.4s ease;
+    z-index: 1;
+}
+
+.overmatch-bar-fill.positive {
+    left: 50%;
+}
+
+.overmatch-bar-fill.negative {
+    right: 50%;
+}
+
+.overmatch-bar-score {
+    font-size: 12px;
+    font-family: var(--font);
+    min-width: 42px;
+    text-align: right;
+    font-weight: normal;
+}
+
+/* ---- Overmatch Zone Card ---- */
+.overmatch-zone-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 0;
+    transition: all 0.15s;
+}
+
+.overmatch-zone-card:hover {
+    border-color: var(--border-bright);
+}
+
+.overmatch-zone-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,176,0,0.02);
+}
+
+.overmatch-zone-name {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+}
+
+.overmatch-zone-score {
+    font-size: 20px;
+    font-family: var(--font);
+}
+
+.overmatch-zone-body {
+    padding: 8px 10px;
+}
+
+.overmatch-zone-verdict {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    padding: 2px 6px;
+    display: inline-block;
+}
+
+.overmatch-zone-verdict.fvey-adv {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid rgba(32,255,96,0.3);
+}
+
+.overmatch-zone-verdict.contested {
+    background: var(--amber-dim);
+    color: var(--amber);
+    border: 1px solid rgba(255,176,0,0.3);
+}
+
+.overmatch-zone-verdict.adv-adv {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid rgba(255,32,32,0.3);
+}
+
+/* ---- Domain Score Mini Cards ---- */
+.domain-scores-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    margin-top: 6px;
+}
+
+.domain-score-card {
+    text-align: center;
+    padding: 4px 2px;
+    background: rgba(255,255,255,0.01);
+    border: 1px solid rgba(255,176,0,0.06);
+}
+
+.domain-score-label {
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+.domain-score-val {
+    font-size: 14px;
+    font-family: var(--font);
+}
+
+/* ---- Wargame Scenario Cards ---- */
+.wargame-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.wargame-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-panel-hover);
+}
+
+.wargame-card.active {
+    border-color: var(--amber);
+    border-left: 3px solid var(--amber);
+}
+
+.wargame-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.wargame-card-body {
+    padding: 8px 10px;
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+.wargame-result-panel {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--amber);
+}
+
+.wargame-result-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,176,0,0.03);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.wargame-result-body {
+    padding: 10px 12px;
+}
+
+.wargame-stat-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,176,0,0.04);
+    font-size: 10px;
+}
+
+.wargame-stat-row:last-child { border-bottom: none; }
+
+.wargame-stat-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+}
+
+.wargame-stat-val {
+    color: var(--text);
+    line-height: 1.5;
+}
+
+/* ---- Incident Timeline ---- */
+.incident-timeline {
+    position: relative;
+    padding-left: 90px;
+}
+
+.incident-timeline::before {
+    content: '';
+    position: absolute;
+    left: 76px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255,176,0,0.15);
+}
+
+.incident-item {
+    position: relative;
+    margin-bottom: 4px;
+    padding: 8px 12px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+}
+
+.incident-item:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-panel-hover);
+}
+
+.incident-date {
+    position: absolute;
+    left: -86px;
+    top: 8px;
+    width: 72px;
+    text-align: right;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+
+.incident-dot {
+    position: absolute;
+    left: -16px;
+    top: 12px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,176,0,0.3);
+}
+
+.incident-dot.critical { background: var(--red); border-color: rgba(255,32,32,0.5); box-shadow: 0 0 6px rgba(255,32,32,0.4); }
+.incident-dot.high { background: var(--cis); border-color: rgba(255,140,0,0.5); }
+.incident-dot.medium { background: var(--amber); border-color: rgba(255,176,0,0.5); }
+.incident-dot.low { background: var(--green); border-color: rgba(32,255,96,0.5); }
+
+.incident-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.incident-title {
+    font-size: 11px;
+    color: var(--white);
+    flex: 1;
+}
+
+.incident-body {
+    font-size: 10px;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+.incident-meta {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* ---- Incident Stats Summary ---- */
+.incident-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.incident-stat-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: center;
+}
+
+.incident-stat-val {
+    font-size: 22px;
+    color: var(--white);
+}
+
+.incident-stat-label {
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ---- Proximity Alert Items ---- */
+.prox-alert {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,32,32,0.06);
+    font-size: 9px;
+}
+
+.prox-alert:last-child { border-bottom: none; }
+
+.prox-alert-dist {
+    font-size: 12px;
+    color: var(--red);
+    font-family: var(--font);
+}
+
+/* ---- Wargame Phase Flow ---- */
+.phase-flow {
+    display: flex;
+    gap: 2px;
+    margin: 6px 0;
+    overflow-x: auto;
+}
+
+.phase-flow::-webkit-scrollbar { height: 3px; }
+.phase-flow::-webkit-scrollbar-thumb { background: rgba(255,176,0,0.1); }
+
+.phase-step {
+    flex: 1;
+    min-width: 100px;
+    padding: 6px 8px;
+    background: rgba(255,176,0,0.02);
+    border: 1px solid var(--border);
+    font-size: 9px;
+    color: var(--text);
+    line-height: 1.4;
+    position: relative;
+}
+
+.phase-step::after {
+    content: '\25B6';
+    position: absolute;
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--amber);
+    font-size: 8px;
+    z-index: 1;
+}
+
+.phase-step:last-child::after { display: none; }
+
+.phase-step-num {
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+    margin-bottom: 2px;
+}
+
+/* ---- Overmatch Global Summary ---- */
+.overmatch-global-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    margin-bottom: 4px;
+}
+
+.overmatch-global-score {
+    font-size: 36px;
+    font-family: var(--font);
+    min-width: 80px;
+    text-align: center;
+}
+
+.overmatch-global-detail {
+    flex: 1;
+}
+
+.overmatch-global-label {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+.overmatch-global-verdict {
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+/* ---- Responsive additions ---- */
+@media (max-width: 1200px) {
+    .domain-scores-grid { grid-template-columns: repeat(3, 1fr); }
+    .incident-timeline { padding-left: 70px; }
+    .incident-timeline::before { left: 56px; }
+    .incident-date { left: -66px; width: 52px; font-size: 8px; }
+    .incident-dot { left: -16px; }
+}
+
+@media (max-width: 900px) {
+    .domain-scores-grid { grid-template-columns: repeat(2, 1fr); }
+    .phase-flow { flex-wrap: wrap; }
+    .overmatch-global-score { font-size: 24px; }
+}

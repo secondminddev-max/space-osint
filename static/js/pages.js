@@ -1,7 +1,7 @@
 /* ============================================================
    FVEY SDA — Page Renderers
    Combined Space Operations Center Display
-   All intelligence APIs integrated — 8 pages
+   ECHELON VANTAGE — 11 Pages — Full Intelligence Dashboard
    ============================================================ */
 
 const Pages = {};
@@ -49,6 +49,10 @@ function countryColor(c) {
 
 function zulu() {
     return new Date().toISOString().substring(11, 19) + 'Z';
+}
+
+function zuluFull() {
+    return new Date().toISOString().substring(0, 19).replace('T', ' ') + 'Z';
 }
 
 async function api(url) {
@@ -106,6 +110,31 @@ function resilienceColor(score) {
     return 'var(--red)';
 }
 
+function overmatchColor(score) {
+    if (score > 20) return 'var(--green)';
+    if (score > -20) return 'var(--amber)';
+    return 'var(--red)';
+}
+
+function overmatchVerdict(score) {
+    if (score > 20) return { text: 'FVEY ADVANTAGE', cls: 'fvey-adv' };
+    if (score > -20) return { text: 'CONTESTED', cls: 'contested' };
+    return { text: 'ADVERSARY ADVANTAGE', cls: 'adv-adv' };
+}
+
+function livePulse(label, cls) {
+    return `<span class="live-pulse ${cls || ''}">${label || 'LIVE'}</span>`;
+}
+
+function lastUpdated(id) {
+    return `<span class="ph-meta" id="${id}" style="font-size:8px;color:var(--text-muted)">--</span>`;
+}
+
+function setTimestamp(id) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = zulu();
+}
+
 const ADV_PROVIDERS = ['CASC', 'China', 'Roscosmos', 'Russia', 'IRGC', 'Iran', 'DPRK', 'Korea', 'Khrunichev', 'Progress', 'ExPace', 'CASIC', 'Galactic Energy', 'LandSpace', 'iSpace', 'CAS Space', 'Orienspace', 'Space Pioneer'];
 
 function isAdvLaunch(l) {
@@ -119,10 +148,24 @@ function satPopup(name, color, fields) {
     </div>`;
 }
 
+function buildOvermatchBar(label, score) {
+    const color = overmatchColor(score);
+    const absScore = Math.abs(score);
+    const pct = (absScore / 100) * 50;
+    const isPositive = score >= 0;
+    return `<div class="overmatch-bar-container">
+        <span class="overmatch-bar-label">${label}</span>
+        <div class="overmatch-bar-track">
+            <div class="overmatch-bar-fill ${isPositive ? 'positive' : 'negative'}" style="width:${pct}%;background:${color};${isPositive ? '' : 'right:auto;left:calc(50% - ' + pct + '%);'}"></div>
+        </div>
+        <span class="overmatch-bar-score" style="color:${color}">${score > 0 ? '+' : ''}${score}</span>
+    </div>`;
+}
+
 
 /* ================================================================
    PAGE 1: COMMAND OVERVIEW (CMD)
-   Primary warfighting display — map-dominant
+   Primary warfighting display -- map-dominant
    ================================================================ */
 Pages.cmd = async function (el) {
     const vh = window.innerHeight;
@@ -177,20 +220,20 @@ Pages.cmd = async function (el) {
                 <div class="map-stat-overlay" id="ov-map-stats"></div>
                 <div class="map-overlay-panels">
                     <div class="overlay-panel">
-                        <div class="op-head">FORCE DISPOSITION</div>
+                        <div class="op-head">FORCE DISPOSITION ${livePulse('', '')}</div>
                         <div class="op-body" id="ov-force"></div>
                     </div>
                     <div class="overlay-panel">
-                        <div class="op-head" style="color:var(--red)">CRITICAL ASAT THREATS</div>
-                        <div class="op-body" id="ov-asat" style="max-height:180px"></div>
+                        <div class="op-head">LIVE SITREP ${livePulse('60S', '')}</div>
+                        <div class="op-body" id="ov-sitrep" style="max-height:140px"></div>
+                    </div>
+                    <div class="overlay-panel">
+                        <div class="op-head" style="color:var(--red)">PROXIMITY ALERTS ${livePulse('120S', 'red')}</div>
+                        <div class="op-body" id="ov-proximity" style="max-height:130px"></div>
                     </div>
                     <div class="overlay-panel">
                         <div class="op-head">ADVERSARY LAUNCH ACTIVITY</div>
-                        <div class="op-body" id="ov-adv-launches" style="max-height:150px"></div>
-                    </div>
-                    <div class="overlay-panel">
-                        <div class="op-head">LIVE SITREP</div>
-                        <div class="op-body" id="ov-sitrep" style="max-height:140px"></div>
+                        <div class="op-body" id="ov-adv-launches" style="max-height:130px"></div>
                     </div>
                 </div>
             </div>
@@ -247,7 +290,7 @@ Pages.cmd = async function (el) {
     }, 200);
 
     // Fetch all data in parallel
-    const [advStats, launches, weather, neo, news, criticalSystems, vulns, stats, sitrep, hotspots, social] = await Promise.all([
+    const [advStats, launches, weather, neo, news, criticalSystems, vulns, stats, sitrep, hotspots, social, proximity] = await Promise.all([
         api('/api/adversary/stats'),
         api('/api/launches'),
         api('/api/weather'),
@@ -259,6 +302,7 @@ Pages.cmd = async function (el) {
         api('/api/intel/sitrep'),
         api('/api/intel/hotspots'),
         api('/api/intel/social'),
+        api('/api/intel/proximity'),
     ]);
 
     // --- Threat bar ---
@@ -347,16 +391,6 @@ Pages.cmd = async function (el) {
         }).join('');
     }
 
-    // --- Critical ASAT ---
-    if (criticalSystems) {
-        document.getElementById('ov-asat').innerHTML = criticalSystems.map(s => `
-            <div class="asat-item">
-                <div class="asat-name"><span class="badge badge-critical">CRIT</span> ${s.name}</div>
-                <div class="asat-meta">${s.country} | ${(s.type || '').replace(/_/g, ' ')} ${s.max_altitude_km ? '| ALT ' + s.max_altitude_km.toLocaleString() + ' KM' : ''} ${s.status ? '| ' + s.status.toUpperCase() : ''}</div>
-            </div>
-        `).join('');
-    }
-
     // --- Live SITREP ---
     function renderSitrep(data) {
         const sitEl = document.getElementById('ov-sitrep');
@@ -372,6 +406,29 @@ Pages.cmd = async function (el) {
             <div style="font-size:7px;color:var(--text-muted);margin-top:3px">${data.timestamp ? timeAgo(data.timestamp) : zulu()}</div>`;
     }
     renderSitrep(sitrep);
+
+    // --- Proximity Alerts ---
+    function renderProximity(data) {
+        const proxEl = document.getElementById('ov-proximity');
+        if (!proxEl) return;
+        if (!data || !data.alerts || !data.alerts.length) {
+            proxEl.innerHTML = '<div style="font-size:9px;color:var(--green);text-align:center;padding:6px">NO ACTIVE PROXIMITY ALERTS</div>';
+            return;
+        }
+        proxEl.innerHTML = `
+            <div style="font-size:8px;color:var(--red);letter-spacing:1px;margin-bottom:3px">${data.total_alerts || data.alerts.length} ACTIVE ALERTS</div>
+            ${data.alerts.slice(0, 5).map(a => `
+                <div class="prox-alert">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="color:var(--white);font-size:9px">${a.fvey_sat || '?'}</span>
+                        <span class="prox-alert-dist">${a.distance_km ? Math.round(a.distance_km) + ' KM' : '?'}</span>
+                    </div>
+                    <div style="font-size:8px;color:var(--text-muted)">THREAT: ${a.adversary_sat || '?'} | ${badge(a.classification || 'high')}</div>
+                </div>
+            `).join('')}
+            <div style="font-size:7px;color:var(--text-muted);margin-top:3px">${zulu()}</div>`;
+    }
+    renderProximity(proximity);
 
     // --- Adversary Launches (live countdown) ---
     function renderAdvLaunches() {
@@ -563,6 +620,12 @@ Pages.cmd = async function (el) {
         renderSitrep(freshSitrep);
     }, 60000);
 
+    // --- AUTO-REFRESH: Proximity every 120s ---
+    registerInterval(async () => {
+        const freshProx = await api('/api/intel/proximity');
+        renderProximity(freshProx);
+    }, 120000);
+
     // --- AUTO-REFRESH: Weather every 60s ---
     registerInterval(async () => {
         const w = await api('/api/weather');
@@ -580,12 +643,20 @@ Pages.cmd = async function (el) {
         }
         if (w.kp_history && typeof updateKpChart === 'function') updateKpChart(w.kp_history);
     }, 60000);
+
+    // --- AUTO-REFRESH: Launches every 120s ---
+    registerInterval(async () => {
+        const freshLaunches = await api('/api/launches');
+        if (freshLaunches) {
+            advLaunches = freshLaunches.filter(l => isAdvLaunch(l));
+        }
+    }, 120000);
 };
 
 
 /* ================================================================
    PAGE 2: ADVERSARY PROFILES
-   Country profiles with tabs — PRC / RUS / DPRK / IRAN
+   Country profiles with tabs -- PRC / RUS / DPRK / IRAN
    ================================================================ */
 Pages.adversary = async function (el) {
     el.innerHTML = '<div class="loading">LOADING ADVERSARY INTELLIGENCE</div>';
@@ -973,11 +1044,11 @@ Pages.launches = async function (el) {
 
             <div class="grid-2">
                 <div class="panel">
-                    <div class="panel-head"><h3>ADVERSARY LAUNCHES</h3><span class="ph-meta"><span class="badge badge-critical">${advLaunches.length} SCHEDULED</span></span></div>
+                    <div class="panel-head"><h3>ADVERSARY LAUNCHES</h3><span class="ph-meta"><span class="badge badge-critical">${advLaunches.length} SCHEDULED</span> ${livePulse('1S', 'red')}</span></div>
                     <div class="panel-body" id="launch-adv" style="max-height:calc(100vh - 280px)"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-head"><h3>ALLIED / OTHER LAUNCHES</h3><span class="ph-meta">${fveyLaunches.length} TOTAL</span></div>
+                    <div class="panel-head"><h3>ALLIED / OTHER LAUNCHES</h3><span class="ph-meta">${fveyLaunches.length} TOTAL ${livePulse('1S', '')}</span></div>
                     <div class="panel-body" id="launch-fvey" style="max-height:calc(100vh - 280px)"></div>
                 </div>
             </div>
@@ -1321,7 +1392,7 @@ Pages.fvey = async function (el) {
                         <div style="font-size:36px;color:${resilienceColor(overallResilience)};text-shadow:0 0 15px ${resilienceColor(overallResilience)}">${overallResilience}%</div>
                         <div>
                             <div style="font-size:11px;color:var(--white);letter-spacing:1px">OVERALL RESILIENCE SCORE</div>
-                            <div style="font-size:9px;color:var(--text-dim);margin-top:2px">${overallResilience < 40 ? 'CRITICAL — Immediate action required across multiple domains' : overallResilience < 70 ? 'DEGRADED — Significant vulnerabilities require priority attention' : 'ADEQUATE — Maintain vigilance and continue hardening'}</div>
+                            <div style="font-size:9px;color:var(--text-dim);margin-top:2px">${overallResilience < 40 ? 'CRITICAL -- Immediate action required across multiple domains' : overallResilience < 70 ? 'DEGRADED -- Significant vulnerabilities require priority attention' : 'ADEQUATE -- Maintain vigilance and continue hardening'}</div>
                         </div>
                     </div>
                     ${(vulns || []).map(v => {
@@ -1596,13 +1667,826 @@ Pages.strategy = async function (el) {
                         fillColor: countryColor(t.country),
                         fillOpacity: 0.7,
                         color: countryColor(t.country),
-                        weight: 0,
-                    }).bindPopup(satPopup(t.name, countryColor(t.country), [
-                        `${t.country} | ${(t.category || '').replace(/_/g, ' ')}`,
-                        `ALT: ${Math.round(t.alt_km || 0)} KM`,
-                    ]), { className: 'sat-popup', closeButton: false }).addTo(hmap);
+                        weight: 0.5,
+                    }).addTo(hmap);
                 });
             });
-        }, 200);
+        }, 150);
     }
+};
+
+
+/* ================================================================
+   PAGE 9: OVERMATCH
+   Crown jewel -- domain overmatch scores for 6 contested zones
+   ================================================================ */
+Pages.overmatch = async function (el) {
+    el.innerHTML = '<div class="loading">CALCULATING OVERMATCH SCORES</div>';
+
+    let overmatch = null;
+    let summary = null;
+    let hotspots = null;
+
+    try {
+        [overmatch, summary, hotspots] = await Promise.all([
+            api('/api/overmatch'),
+            api('/api/overmatch/summary'),
+            api('/api/intel/hotspots'),
+        ]);
+    } catch (e) {
+        // Endpoints may not exist yet
+    }
+
+    const zones = (overmatch && overmatch.zones) ? overmatch.zones : null;
+    const hs = (hotspots && hotspots.hotspots) || [];
+    const domains = ['ISR', 'COMMS', 'PNT', 'SDA', 'ASAT', 'EW'];
+    const mapH = Math.max(380, window.innerHeight * 0.4);
+
+    if (!zones) {
+        // Fallback: show calculating placeholder with hotspot data
+        el.innerHTML = `
+            <div class="page-wrap">
+                <div class="strategy-banner" style="border-bottom-color:var(--amber)">
+                    <div class="strategy-title">FVEY DOMAIN OVERMATCH ASSESSMENT</div>
+                    <div class="strategy-subtitle">UNCLASSIFIED // ${new Date().toISOString().substring(0, 10)} // ${zulu()}</div>
+                    <div class="strategy-threat-display">
+                        <div class="strategy-threat-level elevated" style="animation:blink-text 1.5s step-end infinite">CALCULATING</div>
+                    </div>
+                    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">OVERMATCH ENGINE INITIALIZING -- COLLECTING DOMAIN SCORES</div>
+                </div>
+
+                ${hs.length ? `
+                <div class="section-head">CONTESTED ZONES IDENTIFIED</div>
+                <div class="grid-3 mb-4">
+                    ${hs.slice(0, 6).map(h => `
+                        <div class="overmatch-zone-card">
+                            <div class="overmatch-zone-header">
+                                <span class="overmatch-zone-name">${h.name}</span>
+                                <span style="font-size:9px;color:var(--red)">${h.total_adversary_passes} PASSES</span>
+                            </div>
+                            <div class="overmatch-zone-body">
+                                <div style="text-align:center;padding:10px 0;font-size:10px;color:var(--text-muted);letter-spacing:1px">OVERMATCH DATA PENDING</div>
+                                ${domains.map(d => buildOvermatchBar(d, 0)).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+
+                <div class="panel">
+                    <div class="panel-head"><h3>DOMAIN ANALYSIS PENDING</h3><span class="ph-meta">${livePulse('CALCULATING', 'amber')}</span></div>
+                    <div class="panel-body" style="text-align:center;padding:30px">
+                        <div style="font-size:11px;color:var(--amber);letter-spacing:2px;margin-bottom:8px">OVERMATCH ENGINE LOADING</div>
+                        <div style="font-size:9px;color:var(--text-dim)">The overmatch calculation engine processes ISR, COMMS, PNT, SDA, ASAT, and EW domain data across all 6 contested zones. Refresh when backend is available.</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    // Full overmatch display
+    const globalScore = summary?.global_overmatch || summary?.overall_score || zones.reduce((a, z) => a + (z.overmatch_score || 0), 0) / zones.length;
+    const globalVerdict = overmatchVerdict(globalScore);
+
+    el.innerHTML = `
+        <div class="page-wrap">
+            <div class="strategy-banner" style="border-bottom-color:${overmatchColor(globalScore)}">
+                <div class="strategy-title">FVEY DOMAIN OVERMATCH ASSESSMENT</div>
+                <div class="strategy-subtitle">UNCLASSIFIED // ${new Date().toISOString().substring(0, 10)} // ${zulu()} // ${zones.length} CONTESTED ZONES</div>
+                <div class="strategy-threat-display">
+                    <div class="strategy-threat-level" style="color:${overmatchColor(globalScore)};border-color:${overmatchColor(globalScore)};background:rgba(0,0,0,0.3)">${globalScore > 0 ? '+' : ''}${Math.round(globalScore)}</div>
+                </div>
+                <div style="margin-top:6px">
+                    <span class="overmatch-zone-verdict ${globalVerdict.cls}">${globalVerdict.text}</span>
+                </div>
+                <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-top:6px">SCALE: -100 (ADVERSARY DOMINANT) ... 0 (CONTESTED) ... +100 (FVEY DOMINANT)</div>
+            </div>
+
+            <!-- Global overmatch bar -->
+            <div class="overmatch-global-bar">
+                <div class="overmatch-global-score" style="color:${overmatchColor(globalScore)};text-shadow:0 0 15px ${overmatchColor(globalScore)}">${globalScore > 0 ? '+' : ''}${Math.round(globalScore)}</div>
+                <div class="overmatch-global-detail">
+                    <div class="overmatch-global-label">GLOBAL OVERMATCH SCORE</div>
+                    <div class="overmatch-global-verdict" style="color:${overmatchColor(globalScore)}">${globalVerdict.text}</div>
+                    ${summary?.key_finding ? `<div style="font-size:9px;color:var(--text);margin-top:4px;line-height:1.4">${summary.key_finding}</div>` : ''}
+                </div>
+                <div>${livePulse('LIVE', '')}</div>
+            </div>
+
+            <!-- Overmatch map -->
+            <div class="panel mb-2">
+                <div class="panel-head"><h3>CONTESTED ZONES // OVERMATCH MAP</h3><span class="ph-meta">${zones.length} ZONES | ${zulu()}</span></div>
+                <div class="panel-body" style="padding:0"><div id="overmatch-map" class="map-container" style="height:${mapH}px;min-height:${mapH}px"></div></div>
+            </div>
+
+            <!-- Zone cards -->
+            <div class="section-head">ZONE OVERMATCH BREAKDOWN // 6 DOMAINS</div>
+            <div class="grid-3 mb-4">
+                ${zones.map(z => {
+                    const zScore = z.overmatch_score || 0;
+                    const zVerdict = overmatchVerdict(zScore);
+                    const dm = z.domains || {};
+                    return `
+                    <div class="overmatch-zone-card">
+                        <div class="overmatch-zone-header">
+                            <span class="overmatch-zone-name">${z.zone}</span>
+                            <span class="overmatch-zone-score" style="color:${overmatchColor(zScore)}">${zScore > 0 ? '+' : ''}${zScore}</span>
+                        </div>
+                        <div class="overmatch-zone-body">
+                            <div style="margin-bottom:6px">
+                                <span class="overmatch-zone-verdict ${zVerdict.cls}">${zVerdict.text}</span>
+                                ${z.overall_overmatch ? `<span style="font-size:8px;color:var(--text-muted);margin-left:6px">${z.overall_overmatch}</span>` : ''}
+                            </div>
+                            ${domains.map(d => buildOvermatchBar(d, dm[d] || 0)).join('')}
+                            <div class="domain-scores-grid">
+                                ${domains.map(d => {
+                                    const dScore = dm[d] || 0;
+                                    return `<div class="domain-score-card">
+                                        <div class="domain-score-label">${d}</div>
+                                        <div class="domain-score-val" style="color:${overmatchColor(dScore)}">${dScore > 0 ? '+' : ''}${dScore}</div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+
+            <!-- Key findings & recommendations -->
+            ${summary?.recommendations?.length ? `
+            <div class="panel mb-4">
+                <div class="panel-head"><h3>OVERMATCH RECOMMENDATIONS</h3><span class="ph-meta">${summary.recommendations.length} ITEMS</span></div>
+                <div class="panel-body">
+                    ${summary.recommendations.map((r, i) => `
+                        <div class="threat-card severity-high" style="border-left-color:var(--cyan)">
+                            <div class="tc-header">
+                                <span style="color:var(--text-dim);font-size:9px">#${i + 1}</span>
+                                <span class="tc-title">${typeof r === 'string' ? r : r.title || r.description || ''}</span>
+                            </div>
+                            ${typeof r === 'object' && r.detail ? `<div class="tc-body">${r.detail}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+
+    // Overmatch map
+    setTimeout(() => {
+        const mapEl = document.getElementById('overmatch-map');
+        if (!mapEl) return;
+        mapEl.style.height = mapH + 'px';
+        const omap = makeMap('overmatch-map', [25, 60], 3);
+        if (!omap) return;
+        storeMap(omap);
+
+        // Plot zones from both overmatch data and hotspots
+        zones.forEach(z => {
+            // Try to find matching hotspot for lat/lng
+            const matchHS = hs.find(h => h.name && z.zone && (h.name.toLowerCase().includes(z.zone.split(' ')[0].toLowerCase()) || z.zone.toLowerCase().includes(h.name.split(' ')[0].toLowerCase())));
+            const lat = matchHS?.lat || 0;
+            const lng = matchHS?.lng || 0;
+            if (!lat && !lng) return;
+
+            const zScore = z.overmatch_score || 0;
+            const col = overmatchColor(zScore);
+            const colHex = zScore > 20 ? '#20FF60' : zScore > -20 ? '#FFB000' : '#FF2020';
+            const radius = Math.max(15, Math.abs(zScore) / 2);
+
+            // Zone circle
+            L.circle([lat, lng], {
+                radius: radius * 15000,
+                fillColor: colHex,
+                fillOpacity: 0.12,
+                color: colHex,
+                weight: 1.5,
+                opacity: 0.5,
+            }).addTo(omap);
+
+            // Zone marker
+            L.circleMarker([lat, lng], {
+                radius: 8,
+                fillColor: colHex,
+                fillOpacity: 0.9,
+                color: '#fff',
+                weight: 1,
+                opacity: 0.6,
+            }).bindPopup(satPopup(z.zone, colHex, [
+                `OVERMATCH: <span style="color:${col}">${zScore > 0 ? '+' : ''}${zScore}</span>`,
+                `${overmatchVerdict(zScore).text}`,
+                Object.entries(z.domains || {}).map(([d, v]) => `${d}: <span style="color:${overmatchColor(v)}">${v > 0 ? '+' : ''}${v}</span>`).join(' | '),
+            ]), { className: 'sat-popup', closeButton: false }).addTo(omap);
+        });
+    }, 200);
+};
+
+
+/* ================================================================
+   PAGE 10: WARGAME
+   Conflict simulation -- scenarios, run results, resilience
+   ================================================================ */
+Pages.wargame = async function (el) {
+    el.innerHTML = '<div class="loading">LOADING WARGAME SCENARIOS</div>';
+
+    let scenarios = null;
+    let resilience = null;
+
+    try {
+        [scenarios, resilience] = await Promise.all([
+            api('/api/wargame/scenarios'),
+            api('/api/wargame/resilience'),
+        ]);
+    } catch (e) {
+        // Endpoints may not exist yet
+    }
+
+    const scenarioList = scenarios || [];
+    const hasScenarios = scenarioList.length > 0;
+
+    if (!hasScenarios) {
+        // Fallback: show placeholder with threat scenarios from existing API
+        const threatScenarios = await api('/api/threat/scenarios');
+        const ts = threatScenarios || [];
+
+        el.innerHTML = `
+            <div class="page-wrap">
+                <div class="strategy-banner" style="border-bottom-color:var(--red)">
+                    <div class="strategy-title">CONFLICT SIMULATION ENGINE</div>
+                    <div class="strategy-subtitle">UNCLASSIFIED // WARGAME MODULE // ${zulu()}</div>
+                    <div class="strategy-threat-display">
+                        <div class="strategy-threat-level elevated" style="animation:blink-text 1.5s step-end infinite">INITIALIZING</div>
+                    </div>
+                    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">WARGAME ENGINE LOADING -- ${ts.length} THREAT SCENARIOS AVAILABLE FOR SIMULATION</div>
+                </div>
+
+                ${ts.length ? `
+                <div class="section-head">AVAILABLE THREAT SCENARIOS</div>
+                ${ts.map((s, idx) => `
+                    <div class="wargame-card">
+                        <div class="wargame-card-head">
+                            ${badge(s.severity || s.probability || 'high')}
+                            <span style="color:var(--white);font-size:11px;flex:1">${s.title || s.name}</span>
+                            ${s.probability ? `<span style="font-size:8px;color:var(--text-muted)">P: ${(s.probability || '').toUpperCase()}</span>` : ''}
+                        </div>
+                        <div class="wargame-card-body">
+                            <div>${s.description || ''}</div>
+                            ${s.phases?.length ? `
+                                <div class="phase-flow" style="margin-top:6px">
+                                    ${s.phases.map((p, pi) => `<div class="phase-step"><div class="phase-step-num">PHASE ${pi + 1}</div>${p}</div>`).join('')}
+                                </div>
+                            ` : ''}
+                            ${s.fvey_response ? `<div style="margin-top:6px"><span class="intel-label" style="color:var(--green)">FVEY RESPONSE</span><div style="font-size:9px;color:var(--text);line-height:1.4;margin-top:2px">${s.fvey_response}</div></div>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+                ` : '<div class="empty-state">NO SCENARIOS AVAILABLE</div>'}
+
+                ${resilience ? `
+                <div class="panel mt-4">
+                    <div class="panel-head"><h3>FVEY RECONSTITUTION ASSESSMENT</h3></div>
+                    <div class="panel-body">
+                        <div style="font-size:10px;color:var(--text);line-height:1.6">${typeof resilience === 'string' ? resilience : JSON.stringify(resilience, null, 2)}</div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        return;
+    }
+
+    // Full wargame display with runnable scenarios
+    el.innerHTML = `
+        <div class="page-wrap">
+            <div class="strategy-banner" style="border-bottom-color:var(--red)">
+                <div class="strategy-title">CONFLICT SIMULATION ENGINE</div>
+                <div class="strategy-subtitle">UNCLASSIFIED // WARGAME MODULE // ${zulu()}</div>
+                <div class="strategy-threat-display">
+                    <div class="strategy-threat-level critical">${scenarioList.length} SCENARIOS</div>
+                </div>
+                <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-top:4px">SELECT A SCENARIO TO EXECUTE SIMULATION</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:2px">
+                <div class="panel">
+                    <div class="panel-head"><h3>SCENARIOS</h3><span class="ph-meta">${scenarioList.length}</span></div>
+                    <div class="panel-body" style="max-height:calc(100vh - 260px);padding:0" id="wg-scenario-list"></div>
+                </div>
+                <div id="wg-result-area">
+                    <div class="panel" style="height:100%">
+                        <div class="panel-head"><h3>SIMULATION RESULTS</h3></div>
+                        <div class="panel-body" style="text-align:center;padding:40px">
+                            <div style="font-size:11px;color:var(--text-dim);letter-spacing:2px">SELECT A SCENARIO TO BEGIN</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            ${resilience ? `
+            <div class="panel" style="margin-top:4px">
+                <div class="panel-head"><h3>FVEY RECONSTITUTION & RESILIENCE ASSESSMENT</h3><span class="ph-meta">${livePulse('', '')}</span></div>
+                <div class="panel-body" id="wg-resilience"></div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+
+    // Render scenario list
+    const listEl = document.getElementById('wg-scenario-list');
+    if (listEl) {
+        listEl.innerHTML = scenarioList.map((s, i) => `
+            <div class="wargame-card" data-idx="${i}" style="margin:0;border-left:0;border-right:0;${i > 0 ? 'border-top:0' : ''}">
+                <div class="wargame-card-head" style="padding:6px 10px">
+                    ${badge(s.severity || 'high')}
+                    <span style="color:var(--white);font-size:10px;flex:1">${s.title || s.name || 'Scenario ' + (i + 1)}</span>
+                </div>
+                <div style="padding:4px 10px 6px;font-size:9px;color:var(--text-dim)">${(s.description || '').substring(0, 80)}...</div>
+            </div>
+        `).join('');
+
+        listEl.querySelectorAll('.wargame-card').forEach(card => {
+            card.addEventListener('click', async () => {
+                listEl.querySelectorAll('.wargame-card').forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                const idx = parseInt(card.dataset.idx);
+                const scenario = scenarioList[idx];
+                const resultArea = document.getElementById('wg-result-area');
+                resultArea.innerHTML = '<div class="loading">EXECUTING SIMULATION</div>';
+
+                let result = null;
+                try {
+                    result = await api('/api/wargame/run/' + (scenario.id || idx));
+                } catch (e) {
+                    // May fail
+                }
+
+                if (!result) {
+                    resultArea.innerHTML = `
+                        <div class="wargame-result-panel">
+                            <div class="wargame-result-head">
+                                <h3 style="font-size:10px;letter-spacing:1.5px;color:var(--amber)">${scenario.title || scenario.name}</h3>
+                                <span>${badge(scenario.severity || 'high')}</span>
+                            </div>
+                            <div class="wargame-result-body">
+                                <div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">${scenario.description || ''}</div>
+                                ${scenario.phases?.length ? `
+                                    <div class="phase-flow">
+                                        ${scenario.phases.map((p, pi) => `<div class="phase-step"><div class="phase-step-num">PHASE ${pi + 1}</div>${p}</div>`).join('')}
+                                    </div>
+                                ` : ''}
+                                <div style="text-align:center;padding:16px;color:var(--amber);font-size:10px;letter-spacing:1px">DETAILED SIMULATION RESULTS PENDING ENGINE INITIALIZATION</div>
+                            </div>
+                        </div>`;
+                    return;
+                }
+
+                // Render full result
+                resultArea.innerHTML = `
+                    <div class="wargame-result-panel">
+                        <div class="wargame-result-head">
+                            <h3 style="font-size:10px;letter-spacing:1.5px;color:var(--amber)">${result.title || scenario.title || 'SIMULATION RESULT'}</h3>
+                            <span>${badge(result.severity || scenario.severity || 'high')} ${livePulse('COMPLETE', '')}</span>
+                        </div>
+                        <div class="wargame-result-body" style="max-height:calc(100vh - 320px);overflow-y:auto">
+                            ${result.description ? `<div style="font-size:10px;color:var(--text);line-height:1.6;margin-bottom:8px">${result.description}</div>` : ''}
+                            ${result.engagement_capacity ? `<div class="wargame-stat-row"><span class="wargame-stat-label">ENGAGEMENT CAPACITY</span><span class="wargame-stat-val">${typeof result.engagement_capacity === 'object' ? JSON.stringify(result.engagement_capacity) : result.engagement_capacity}</span></div>` : ''}
+                            ${result.impact_assessment ? `<div class="wargame-stat-row"><span class="wargame-stat-label">IMPACT ASSESSMENT</span><span class="wargame-stat-val" style="color:var(--red)">${typeof result.impact_assessment === 'object' ? JSON.stringify(result.impact_assessment) : result.impact_assessment}</span></div>` : ''}
+                            ${result.debris_consequences ? `<div class="wargame-stat-row"><span class="wargame-stat-label">DEBRIS CONSEQUENCES</span><span class="wargame-stat-val">${typeof result.debris_consequences === 'object' ? JSON.stringify(result.debris_consequences) : result.debris_consequences}</span></div>` : ''}
+                            ${result.fvey_response_options ? `<div class="wargame-stat-row"><span class="wargame-stat-label">FVEY RESPONSE</span><span class="wargame-stat-val" style="color:var(--green)">${typeof result.fvey_response_options === 'object' ? (Array.isArray(result.fvey_response_options) ? result.fvey_response_options.join('; ') : JSON.stringify(result.fvey_response_options)) : result.fvey_response_options}</span></div>` : ''}
+                            ${result.reconstitution_timeline ? `<div class="wargame-stat-row"><span class="wargame-stat-label">RECONSTITUTION</span><span class="wargame-stat-val" style="color:var(--cyan)">${typeof result.reconstitution_timeline === 'object' ? JSON.stringify(result.reconstitution_timeline) : result.reconstitution_timeline}</span></div>` : ''}
+                            ${result.phases?.length ? `
+                                <div style="margin-top:8px"><span class="intel-label">ESCALATION PHASES</span>
+                                <div class="phase-flow" style="margin-top:4px">
+                                    ${result.phases.map((p, pi) => `<div class="phase-step"><div class="phase-step-num">PHASE ${pi + 1}</div>${typeof p === 'object' ? (p.description || p.name || JSON.stringify(p)) : p}</div>`).join('')}
+                                </div></div>
+                            ` : ''}
+                            ${result.outcome ? `<div style="margin-top:8px;padding:8px;background:rgba(255,176,0,0.03);border:1px solid var(--border)"><span class="intel-label">OUTCOME</span><div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:3px">${typeof result.outcome === 'object' ? JSON.stringify(result.outcome) : result.outcome}</div></div>` : ''}
+                        </div>
+                    </div>`;
+            });
+        });
+    }
+
+    // Render resilience
+    if (resilience) {
+        const resEl = document.getElementById('wg-resilience');
+        if (resEl) {
+            if (typeof resilience === 'object') {
+                const fields = Object.entries(resilience);
+                resEl.innerHTML = fields.map(([k, v]) => `
+                    <div class="wargame-stat-row">
+                        <span class="wargame-stat-label">${k.replace(/_/g, ' ').toUpperCase()}</span>
+                        <span class="wargame-stat-val">${typeof v === 'object' ? JSON.stringify(v) : v}</span>
+                    </div>
+                `).join('');
+            } else {
+                resEl.innerHTML = `<div style="font-size:10px;color:var(--text);line-height:1.6">${resilience}</div>`;
+            }
+        }
+    }
+};
+
+
+/* ================================================================
+   PAGE 11: INCIDENTS
+   Historical timeline of 17 space security incidents
+   ================================================================ */
+Pages.incidents = async function (el) {
+    el.innerHTML = '<div class="loading">LOADING INCIDENT DATABASE</div>';
+
+    const [incidents, incStats] = await Promise.all([
+        api('/api/incidents'),
+        api('/api/incidents/stats'),
+    ]);
+
+    const all = incidents || [];
+    if (!all.length) { el.innerHTML = '<div class="empty-state">INCIDENT DATA UNAVAILABLE</div>'; return; }
+
+    // Build stat arrays
+    const stats = incStats || {};
+    const byType = stats.by_type || {};
+    const byActor = stats.by_actor || {};
+    const bySeverity = stats.by_severity || {};
+
+    // Unique filter values
+    const types = [...new Set(all.map(i => i.type).filter(Boolean))];
+    const actors = [...new Set(all.map(i => i.actor).filter(Boolean))];
+    const years = [...new Set(all.map(i => {
+        if (i.date) return new Date(i.date).getFullYear();
+        if (i.year) return i.year;
+        return null;
+    }).filter(Boolean))].sort((a, b) => b - a);
+
+    el.innerHTML = `
+        <div class="page-wrap">
+            <div class="strategy-banner" style="border-bottom-color:var(--cis)">
+                <div class="strategy-title">SPACE SECURITY INCIDENT DATABASE</div>
+                <div class="strategy-subtitle">UNCLASSIFIED // ${all.length} DOCUMENTED INCIDENTS // OSINT COMPILATION</div>
+            </div>
+
+            <!-- Stats summary -->
+            <div class="incident-stats-grid">
+                <div class="incident-stat-card" style="border-left:2px solid var(--red)">
+                    <div class="incident-stat-val" style="color:var(--red)">${all.length}</div>
+                    <div class="incident-stat-label">TOTAL INCIDENTS</div>
+                </div>
+                ${Object.entries(bySeverity).slice(0, 4).map(([sev, count]) => `
+                    <div class="incident-stat-card">
+                        <div class="incident-stat-val">${count}</div>
+                        <div class="incident-stat-label">${sev.toUpperCase()}</div>
+                    </div>
+                `).join('')}
+                ${Object.entries(byActor).slice(0, 3).map(([actor, count]) => `
+                    <div class="incident-stat-card">
+                        <div class="incident-stat-val">${count}</div>
+                        <div class="incident-stat-label">${actor.toUpperCase()}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <!-- Distribution bars -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-bottom:4px">
+                <div class="panel">
+                    <div class="panel-head"><h3>BY TYPE</h3></div>
+                    <div class="panel-body">
+                        ${Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([t, count], i) => {
+                            const colors = ['#FF2020', '#FF8C00', '#FFD700', '#C040FF', '#2080FF', '#20FF60', '#00D4FF'];
+                            return `<div class="cat-breakdown"><span class="cat-label">${t.replace(/-/g, ' ').toUpperCase()}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${count / all.length * 100}%;background:${colors[i % colors.length]}"></div></div><span class="cat-count">${count}</span></div>`;
+                        }).join('')}
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-head"><h3>BY ACTOR</h3></div>
+                    <div class="panel-body">
+                        ${Object.entries(byActor).sort((a, b) => b[1] - a[1]).map(([a, count]) => {
+                            const actorMap = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
+                            const col = actorMap[a] || '#FFB000';
+                            return `<div class="cat-breakdown"><span class="cat-label" style="color:${col}">${a}</span><div class="cat-bar-wrap"><div class="cat-bar" style="width:${count / all.length * 100}%;background:${col}"></div></div><span class="cat-count">${count}</span></div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-tabs" id="incident-filters">
+                <div class="filter-tab active" data-filter="all">ALL (${all.length})</div>
+                ${types.slice(0, 5).map(t => `<div class="filter-tab" data-filter="type:${t}">${t.replace(/-/g, ' ').toUpperCase()}</div>`).join('')}
+                ${actors.slice(0, 4).map(a => `<div class="filter-tab" data-filter="actor:${a}">${a.toUpperCase()}</div>`).join('')}
+            </div>
+
+            <!-- Timeline -->
+            <div class="panel">
+                <div class="panel-head"><h3>INCIDENT TIMELINE</h3><span class="ph-meta">${livePulse('', '')} ${all.length} EVENTS</span></div>
+                <div class="panel-body" style="max-height:calc(100vh - 460px)" id="incident-timeline-wrap"></div>
+            </div>
+        </div>
+    `;
+
+    function renderTimeline(filter) {
+        let filtered = all;
+        if (filter && filter !== 'all') {
+            if (filter.startsWith('type:')) {
+                const t = filter.replace('type:', '');
+                filtered = all.filter(i => i.type === t);
+            } else if (filter.startsWith('actor:')) {
+                const a = filter.replace('actor:', '');
+                filtered = all.filter(i => i.actor === a);
+            } else if (filter.startsWith('year:')) {
+                const y = parseInt(filter.replace('year:', ''));
+                filtered = all.filter(i => {
+                    const iYear = i.date ? new Date(i.date).getFullYear() : i.year;
+                    return iYear === y;
+                });
+            }
+        }
+
+        // Sort by date descending
+        filtered.sort((a, b) => {
+            const dateA = a.date ? new Date(a.date).getTime() : (a.year ? new Date(a.year + '-01-01').getTime() : 0);
+            const dateB = b.date ? new Date(b.date).getTime() : (b.year ? new Date(b.year + '-01-01').getTime() : 0);
+            return dateB - dateA;
+        });
+
+        const timelineEl = document.getElementById('incident-timeline-wrap');
+        if (!timelineEl) return;
+
+        timelineEl.innerHTML = `
+            <div class="incident-timeline">
+                ${filtered.map(inc => {
+                    const date = inc.date ? new Date(inc.date).toISOString().substring(0, 10) : (inc.year ? inc.year + '' : '?');
+                    const sev = (inc.severity || 'medium').toLowerCase();
+                    const actorCol = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
+                    return `
+                    <div class="incident-item">
+                        <div class="incident-date">${date}</div>
+                        <div class="incident-dot ${sev}"></div>
+                        <div class="incident-head">
+                            ${badge(sev)}
+                            ${inc.actor ? `<span class="badge" style="background:rgba(255,255,255,0.05);color:${actorCol[inc.actor] || 'var(--amber)};border:1px solid ${actorCol[inc.actor] || 'var(--amber)'}50">${inc.actor}</span>` : ''}
+                            ${inc.type ? `<span style="font-size:8px;letter-spacing:1px;color:var(--text-muted)">${inc.type.replace(/-/g, ' ').toUpperCase()}</span>` : ''}
+                            <span class="incident-title">${inc.title || inc.name || '?'}</span>
+                        </div>
+                        <div class="incident-body">${inc.description || ''}</div>
+                        <div class="incident-meta">
+                            ${inc.impact ? `<span>IMPACT: <span style="color:var(--red)">${inc.impact}</span></span>` : ''}
+                            ${inc.orbit_affected ? `<span>ORBIT: ${inc.orbit_affected}</span>` : ''}
+                            ${inc.debris_generated ? `<span>DEBRIS: <span style="color:var(--cis)">${inc.debris_generated}</span></span>` : ''}
+                            ${inc.source ? `<span style="color:var(--text-muted)">SRC: ${inc.source}</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    renderTimeline('all');
+
+    el.querySelectorAll('#incident-filters .filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            el.querySelectorAll('#incident-filters .filter-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderTimeline(tab.dataset.filter);
+        });
+    });
+};
+
+
+/* ================================================================
+   PAGE: FUTURES — Space Program Tracking
+   ================================================================ */
+Pages.futures = async function(el) {
+    el.innerHTML = '<div class="loading">LOADING FUTURES INTELLIGENCE</div>';
+    const [data, summary] = await Promise.all([
+        api('/api/futures'),
+        api('/api/futures/summary'),
+    ]);
+    if (!data) { el.innerHTML = '<div class="empty-state">FUTURES DATA UNAVAILABLE</div>'; return; }
+
+    const nations = ['PRC', 'Russia', 'DPRK', 'Iran', 'US', 'UK', 'Australia', 'Japan', 'South Korea', 'NATO'];
+    const programs = Array.isArray(data) ? data : [];
+
+    el.innerHTML = `
+        <div class="page-wrap">
+            <div class="threat-bar mb-2">
+                <div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">${programs.filter(p => ['PRC','Russia','DPRK','Iran'].includes(p.nation)).length}</div><div class="tb-lbl">ADVERSARY PROGRAMS</div></div></div>
+                <div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">${programs.filter(p => ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation)).length}</div><div class="tb-lbl">ALLIED PROGRAMS</div></div></div>
+                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${programs.length}</div><div class="tb-lbl">TOTAL TRACKED</div></div></div>
+            </div>
+            <div class="filter-tabs mb-2" id="futures-tabs">
+                <div class="filter-tab active" data-filter="all">ALL</div>
+                <div class="filter-tab" data-filter="PRC" style="color:var(--red)">PRC</div>
+                <div class="filter-tab" data-filter="Russia" style="color:var(--cis)">RUSSIA</div>
+                <div class="filter-tab" data-filter="US" style="color:var(--cyan)">US/FVEY</div>
+                <div class="filter-tab" data-filter="adversary">ADVERSARY</div>
+                <div class="filter-tab" data-filter="ASAT">ASAT/COUNTER</div>
+                <div class="filter-tab" data-filter="lunar">LUNAR</div>
+            </div>
+            <div id="futures-list"></div>
+        </div>
+    `;
+
+    function renderFutures(filter) {
+        let filtered = programs;
+        if (filter === 'adversary') filtered = programs.filter(p => ['PRC','Russia','DPRK','Iran'].includes(p.nation));
+        else if (filter === 'US/FVEY' || filter === 'US') filtered = programs.filter(p => ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation));
+        else if (filter === 'ASAT') filtered = programs.filter(p => (p.domain||'').toLowerCase().includes('asat') || (p.domain||'').toLowerCase().includes('counter'));
+        else if (filter === 'lunar') filtered = programs.filter(p => (p.domain||'').toLowerCase().includes('lunar') || (p.description||'').toLowerCase().includes('lunar') || (p.description||'').toLowerCase().includes('moon'));
+        else if (filter !== 'all') filtered = programs.filter(p => p.nation === filter);
+
+        document.getElementById('futures-list').innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+            ${filtered.map(p => {
+                const isAdv = ['PRC','Russia','DPRK','Iran'].includes(p.nation);
+                const col = countryColor(p.nation === 'Russia' ? 'CIS' : p.nation === 'DPRK' ? 'NKOR' : p.nation === 'Iran' ? 'IRAN' : p.nation === 'PRC' ? 'PRC' : 'US');
+                const statusCol = p.status === 'operational' ? 'var(--green)' : p.status === 'development' ? 'var(--amber)' : p.status === 'delayed' ? 'var(--red)' : 'var(--cyan)';
+                return `
+                <div class="threat-card severity-${isAdv ? 'high' : 'low'}" style="border-left-color:${col}">
+                    <div class="tc-header">
+                        <span class="badge badge-${isAdv ? 'prc' : 'fvey'}">${p.nation || '?'}</span>
+                        <span class="tc-title">${p.program_name || p.name || '?'}</span>
+                    </div>
+                    <div class="tc-body">${p.description || ''}</div>
+                    <div class="tc-meta">
+                        DOMAIN: ${p.domain || '?'} // STATUS: <span style="color:${statusCol}">${(p.status||'?').toUpperCase()}</span>
+                        ${p.timeline ? ' // TIMELINE: ' + p.timeline : ''}
+                    </div>
+                    ${p.strategic_impact ? `<div class="tc-source">IMPACT: ${p.strategic_impact}</div>` : ''}
+                </div>`;
+            }).join('')}
+            </div>
+        `;
+    }
+
+    renderFutures('all');
+    el.querySelectorAll('#futures-tabs .filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            el.querySelectorAll('#futures-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderFutures(tab.dataset.filter);
+        });
+    });
+};
+
+
+/* ================================================================
+   PAGE: CONFERENCES — Global Space Forums Tracker
+   ================================================================ */
+Pages.conferences = async function(el) {
+    el.innerHTML = '<div class="loading">LOADING CONFERENCE INTELLIGENCE</div>';
+    const [upcoming, all] = await Promise.all([
+        api('/api/conferences/upcoming'),
+        api('/api/conferences'),
+    ]);
+
+    const events = Array.isArray(upcoming) ? upcoming : (Array.isArray(all) ? all : []);
+
+    el.innerHTML = `
+        <div class="page-wrap">
+            <div class="threat-bar mb-2">
+                <div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">${events.length}</div><div class="tb-lbl">TRACKED EVENTS</div></div></div>
+                <div class="tb-cell alert"><div class="tb-icon">&#9733;</div><div><div class="tb-val">${events.filter(e => e.relevance_to_fvey === 'high' || e.relevance === 'high').length}</div><div class="tb-lbl">HIGH RELEVANCE</div></div></div>
+            </div>
+            <div class="filter-tabs mb-2" id="conf-tabs">
+                <div class="filter-tab active" data-filter="all">ALL</div>
+                <div class="filter-tab" data-filter="high">HIGH RELEVANCE</div>
+                <div class="filter-tab" data-filter="military">MILITARY/GOV</div>
+                <div class="filter-tab" data-filter="industry">INDUSTRY</div>
+                <div class="filter-tab" data-filter="academic">ACADEMIC</div>
+            </div>
+            <div id="conf-list"></div>
+        </div>
+    `;
+
+    function renderConfs(filter) {
+        let filtered = events;
+        if (filter === 'high') filtered = events.filter(e => (e.relevance_to_fvey || e.relevance) === 'high');
+        else if (filter === 'military') filtered = events.filter(e => (e.category||e.organization||'').toLowerCase().match(/military|government|defense|defence|nato|space force|dod/));
+        else if (filter === 'industry') filtered = events.filter(e => (e.category||e.organization||'').toLowerCase().match(/industry|commercial|conference|satellite|iac/));
+        else if (filter === 'academic') filtered = events.filter(e => (e.category||e.organization||'').toLowerCase().match(/academic|research|university|think tank|csis|swf/));
+
+        document.getElementById('conf-list').innerHTML = filtered.map(e => {
+            const relCol = (e.relevance_to_fvey || e.relevance) === 'high' ? 'var(--red)' : (e.relevance_to_fvey || e.relevance) === 'medium' ? 'var(--amber)' : 'var(--cyan)';
+            return `
+            <div class="threat-card severity-medium" style="border-left-color:${relCol}">
+                <div class="tc-header">
+                    <span class="badge" style="background:rgba(255,176,0,0.1);color:${relCol};border:1px solid ${relCol}">${(e.relevance_to_fvey || e.relevance || '?').toUpperCase()}</span>
+                    <span class="tc-title">${e.name || '?'}</span>
+                </div>
+                <div class="tc-body">${e.description || ''}</div>
+                <div class="tc-meta">
+                    ${e.organization ? 'ORG: ' + e.organization + ' // ' : ''}
+                    ${e.location ? 'LOCATION: ' + e.location + ' // ' : ''}
+                    ${e.frequency ? 'FREQ: ' + e.frequency + ' // ' : ''}
+                    ${e.next_occurrence ? 'NEXT: ' + e.next_occurrence : (e.date_start ? 'DATE: ' + e.date_start : '')}
+                </div>
+                ${e.topics?.length ? `<div class="tc-source">TOPICS: ${e.topics.join(', ')}</div>` : ''}
+                ${e.url ? `<div class="tc-source"><a href="${e.url}" target="_blank" style="color:var(--cyan)">${e.url}</a></div>` : ''}
+            </div>`;
+        }).join('') || '<div class="empty-state">NO EVENTS FOUND</div>';
+    }
+
+    renderConfs('all');
+    el.querySelectorAll('#conf-tabs .filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            el.querySelectorAll('#conf-tabs .filter-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderConfs(tab.dataset.filter);
+        });
+    });
+};
+
+
+/* ================================================================
+   PAGE: ARCHITECTURE — Ground Segment Architecture
+   ================================================================ */
+Pages.architecture = async function(el) {
+    el.innerHTML = '<div class="loading">LOADING ARCHITECTURE INTELLIGENCE</div>';
+    const [prc, russia, fvey, comparison] = await Promise.all([
+        api('/api/architecture/prc'),
+        api('/api/architecture/russia'),
+        api('/api/architecture/fvey'),
+        api('/api/architecture/comparison'),
+    ]);
+
+    el.innerHTML = `
+        <div class="page-wrap">
+            <div class="threat-bar mb-2">
+                <div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">PRC</div><div class="tb-lbl">ADVERSARY ARCH</div></div></div>
+                <div class="tb-cell warning"><div class="tb-icon">&#9760;</div><div><div class="tb-val">RUS</div><div class="tb-lbl">ADVERSARY ARCH</div></div></div>
+                <div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">FVEY</div><div class="tb-lbl">ALLIED ARCH</div></div></div>
+            </div>
+            <div class="country-tabs mb-2" id="arch-tabs">
+                <div class="country-tab active" data-arch="prc" style="color:var(--red)">PRC ARCHITECTURE</div>
+                <div class="country-tab" data-arch="russia" style="color:var(--cis)">RUSSIAN ARCHITECTURE</div>
+                <div class="country-tab" data-arch="fvey" style="color:var(--cyan)">FVEY ARCHITECTURE</div>
+                <div class="country-tab" data-arch="comparison">COMPARISON</div>
+            </div>
+            <div id="arch-detail"></div>
+        </div>
+    `;
+
+    function renderArch(which) {
+        const data = which === 'prc' ? prc : which === 'russia' ? russia : which === 'fvey' ? fvey : comparison;
+        if (!data) { document.getElementById('arch-detail').innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
+
+        if (which === 'comparison') {
+            const comp = data;
+            document.getElementById('arch-detail').innerHTML = `
+                <div class="panel mb-2">
+                    <div class="panel-head"><h3>ADVERSARY vs FVEY GROUND ARCHITECTURE COMPARISON</h3></div>
+                    <div class="panel-body" style="max-height:none">
+                        ${typeof comp === 'object' ? Object.entries(comp).map(([key, val]) => {
+                            if (typeof val === 'string') return `<div class="intel-field"><span class="intel-label">${key.replace(/_/g,' ').toUpperCase()}</span>${val}</div>`;
+                            if (typeof val === 'object' && !Array.isArray(val)) {
+                                return `<div class="threat-card severity-medium"><div class="tc-header"><span class="tc-title">${key.replace(/_/g,' ').toUpperCase()}</span></div><div class="tc-body">${JSON.stringify(val, null, 1).replace(/[{}"]/g,'').replace(/,\n/g,'<br>')}</div></div>`;
+                            }
+                            return '';
+                        }).join('') : `<div class="tc-body" style="white-space:pre-wrap">${JSON.stringify(comp, null, 2)}</div>`}
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        // Render architecture detail
+        const col = which === 'prc' ? 'var(--red)' : which === 'russia' ? 'var(--cis)' : 'var(--cyan)';
+        const label = which === 'prc' ? 'PRC' : which === 'russia' ? 'RUSSIAN' : 'FVEY';
+
+        const sections = typeof data === 'object' && !Array.isArray(data) ? Object.entries(data) : [];
+        document.getElementById('arch-detail').innerHTML = sections.map(([key, val]) => {
+            if (key === 'country' || key === 'generated_utc') return '';
+            const title = key.replace(/_/g, ' ').toUpperCase();
+            let body = '';
+            if (typeof val === 'string') {
+                body = `<div class="tc-body">${val}</div>`;
+            } else if (Array.isArray(val)) {
+                body = val.map(item => {
+                    if (typeof item === 'string') return `<div style="padding:3px 0;border-bottom:1px solid var(--border);font-size:10px">${item}</div>`;
+                    if (typeof item === 'object') {
+                        return `<div class="threat-card severity-medium" style="border-left-color:${col}">
+                            <div class="tc-header"><span class="tc-title">${item.name || item.title || Object.values(item)[0] || '?'}</span></div>
+                            <div class="tc-body">${item.description || item.role || item.detail || JSON.stringify(item)}</div>
+                            ${item.facilities ? `<div class="tc-meta">FACILITIES: ${Array.isArray(item.facilities) ? item.facilities.join(', ') : item.facilities}</div>` : ''}
+                            ${item.coverage ? `<div class="tc-meta">COVERAGE: ${item.coverage}</div>` : ''}
+                            ${item.vulnerability ? `<div class="tc-source" style="color:var(--red)">VULNERABILITY: ${item.vulnerability}</div>` : ''}
+                        </div>`;
+                    }
+                    return '';
+                }).join('');
+            } else if (typeof val === 'object') {
+                body = `<div class="tc-body" style="font-size:10px">${Object.entries(val).map(([k,v]) => `<div class="intel-field"><span class="intel-label">${k.replace(/_/g,' ').toUpperCase()}</span>${typeof v === 'string' ? v : JSON.stringify(v)}</div>`).join('')}</div>`;
+            }
+            return `<div class="panel mb-2"><div class="panel-head"><h3>${label} // ${title}</h3></div><div class="panel-body" style="max-height:500px">${body}</div></div>`;
+        }).join('');
+    }
+
+    renderArch('prc');
+    el.querySelectorAll('#arch-tabs .country-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            el.querySelectorAll('#arch-tabs .country-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            renderArch(tab.dataset.arch);
+        });
+    });
 };

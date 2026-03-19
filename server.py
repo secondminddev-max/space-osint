@@ -18,6 +18,8 @@ from data_sources import (
     adversary_sats, ground_stations, missile_intel, threat_assessment,
     researcher, live_intel, social_monitor,
     proximity_alert, threat_timeline, incident_db,
+    overmatch, wargame,
+    futures, conferences, architecture,
 )
 
 _client: httpx.AsyncClient = None
@@ -306,6 +308,126 @@ async def api_incidents(
     if year > 0:
         return JSONResponse(incident_db.get_incidents_by_year(year))
     return JSONResponse(incident_db.get_all_incidents())
+
+
+# ---- Overmatch Calculator ----
+
+@app.get("/api/overmatch")
+async def api_overmatch():
+    """Real-time overmatch calculation for all strategic zones."""
+    return JSONResponse(await overmatch.calculate_all_overmatches(_client))
+
+@app.get("/api/overmatch/zone")
+async def api_overmatch_zone(
+    lat: float = Query(23.5, description="Zone center latitude"),
+    lng: float = Query(120.5, description="Zone center longitude"),
+    name: str = Query("Custom Zone", description="Zone name"),
+):
+    """Overmatch calculation for a single zone by coordinates."""
+    return JSONResponse(
+        await overmatch.calculate_zone_overmatch(_client, lat, lng, name)
+    )
+
+@app.get("/api/overmatch/summary")
+async def api_overmatch_summary():
+    """Global overmatch summary — aggregate score across all zones."""
+    return JSONResponse(await overmatch.get_global_overmatch_summary(_client))
+
+
+# ---- Wargame Simulator ----
+
+@app.get("/api/wargame/scenarios")
+async def api_wargame_scenarios():
+    """List all available wargame scenarios."""
+    return JSONResponse(wargame.get_all_scenarios())
+
+@app.get("/api/wargame/run/{scenario_id}")
+async def api_wargame_run(scenario_id: str):
+    """Execute a specific wargame scenario."""
+    result = wargame.run_scenario(scenario_id)
+    if result is None:
+        return JSONResponse(
+            {"error": f"Scenario '{scenario_id}' not found", "available": list(wargame._SCENARIOS.keys())},
+            status_code=404,
+        )
+    return JSONResponse(result)
+
+@app.get("/api/wargame/full-spectrum")
+async def api_wargame_full_spectrum():
+    """Worst-case full spectrum counter-space attack scenario."""
+    return JSONResponse(wargame.run_full_spectrum_assessment())
+
+@app.get("/api/wargame/resilience")
+async def api_wargame_resilience():
+    """FVEY reconstitution and resilience assessment."""
+    return JSONResponse(wargame.assess_fvey_resilience())
+
+
+# ---- Future Space Programs ----
+
+@app.get("/api/futures/summary")
+async def api_futures_summary():
+    """Summary statistics of all future space programs."""
+    return JSONResponse(futures.get_futures_summary())
+
+@app.get("/api/futures")
+async def api_futures(nation: str = "", domain: str = "", year: int = 0):
+    """Future space programs — all nations, filterable by nation, domain, or year."""
+    if nation:
+        return JSONResponse(futures.get_futures_by_nation(nation))
+    if domain:
+        return JSONResponse(futures.get_futures_by_domain(domain))
+    if year > 0:
+        return JSONResponse(futures.get_futures_by_timeline(year))
+    return JSONResponse(futures.get_all_futures())
+
+
+# ---- Space Conferences & Events ----
+
+@app.get("/api/conferences/upcoming")
+async def api_conferences_upcoming():
+    """Upcoming space conferences in the next 12 months."""
+    return JSONResponse(conferences.get_upcoming_conferences())
+
+@app.get("/api/conferences/calendar")
+async def api_conferences_calendar():
+    """Month-by-month conference calendar."""
+    return JSONResponse(conferences.get_conference_calendar())
+
+@app.get("/api/conferences/live")
+async def api_conferences_live():
+    """Live events from Spaceflight News API."""
+    return JSONResponse(await conferences.fetch_live_events(_client))
+
+@app.get("/api/conferences")
+async def api_conferences(relevance: str = ""):
+    """All space conferences and events, optionally filtered by FVEY relevance."""
+    if relevance:
+        return JSONResponse(conferences.get_conferences_by_relevance(relevance))
+    return JSONResponse(conferences.get_all_conferences())
+
+
+# ---- Ground Architecture Analysis ----
+
+@app.get("/api/architecture/prc")
+async def api_architecture_prc():
+    """Detailed PRC space ground segment architecture analysis."""
+    return JSONResponse(architecture.get_prc_architecture())
+
+@app.get("/api/architecture/russia")
+async def api_architecture_russia():
+    """Detailed Russian space ground segment architecture analysis."""
+    return JSONResponse(architecture.get_russia_architecture())
+
+@app.get("/api/architecture/fvey")
+async def api_architecture_fvey():
+    """Detailed FVEY space ground segment architecture analysis."""
+    return JSONResponse(architecture.get_fvey_architecture())
+
+@app.get("/api/architecture/comparison")
+async def api_architecture_comparison():
+    """Side-by-side comparison of adversary vs FVEY ground capabilities."""
+    return JSONResponse(architecture.get_architecture_comparison())
 
 
 # ---- System ----
