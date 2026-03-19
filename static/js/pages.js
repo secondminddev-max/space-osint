@@ -46,7 +46,7 @@ function zulu() {
 }
 
 async function api(url) {
-    try { const r = await fetch(url); return r.ok ? await r.json() : null; } catch { return null; }
+    try { const r = await fetch(url); return r.ok ? await r.json() : null; } catch(e) { return null; }
 }
 
 function registerInterval(fn, ms) {
