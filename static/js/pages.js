@@ -2211,33 +2211,31 @@ Pages.incidents = async function (el) {
         const timelineEl = document.getElementById('incident-timeline-wrap');
         if (!timelineEl) return;
 
-        timelineEl.innerHTML = `
-            <div class="incident-timeline">
-                ${filtered.map(inc => {
-                    const date = inc.date ? new Date(inc.date).toISOString().substring(0, 10) : (inc.year ? inc.year + '' : '?');
-                    const sev = (inc.severity || 'medium').toLowerCase();
-                    const actorCol = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
-                    return `
-                    <div class="incident-item">
-                        <div class="incident-date">${date}</div>
-                        <div class="incident-dot ${sev}"></div>
-                        <div class="incident-head">
-                            ${badge(sev)}
-                            ${inc.actor ? `<span class="badge" style="background:rgba(255,255,255,0.05);color:${actorCol[inc.actor] || 'var(--amber)};border:1px solid ${actorCol[inc.actor] || 'var(--amber)'}50">${inc.actor}</span>` : ''}
-                            ${inc.type ? `<span style="font-size:8px;letter-spacing:1px;color:var(--text-muted)">${inc.type.replace(/-/g, ' ').toUpperCase()}</span>` : ''}
-                            <span class="incident-title">${inc.title || inc.name || '?'}</span>
-                        </div>
-                        <div class="incident-body">${inc.description || ''}</div>
-                        <div class="incident-meta">
-                            ${inc.impact ? `<span>IMPACT: <span style="color:var(--red)">${inc.impact}</span></span>` : ''}
-                            ${inc.orbit_affected ? `<span>ORBIT: ${inc.orbit_affected}</span>` : ''}
-                            ${inc.debris_generated ? `<span>DEBRIS: <span style="color:var(--cis)">${inc.debris_generated}</span></span>` : ''}
-                            ${inc.source ? `<span style="color:var(--text-muted)">SRC: ${inc.source}</span>` : ''}
-                        </div>
-                    </div>`;
-                }).join('')}
-            </div>
-        `;
+        var actorColors = { 'PRC': '#FF2020', 'China': '#FF2020', 'Russia': '#FF8C00', 'CIS': '#FF8C00', 'India': '#20FF60', 'US': '#2080FF', 'USA': '#2080FF' };
+        var html = '<div class="incident-timeline">';
+        filtered.forEach(function(inc) {
+            var date = inc.date ? new Date(inc.date).toISOString().substring(0, 10) : (inc.year ? inc.year + '' : '?');
+            var sev = (inc.severity || 'medium').toLowerCase();
+            var col = actorColors[inc.actor] || '#FFB000';
+            html += '<div class="incident-item">';
+            html += '<div class="incident-date">' + date + '</div>';
+            html += '<div class="incident-dot ' + sev + '"></div>';
+            html += '<div class="incident-head">';
+            html += badge(sev);
+            if (inc.actor) html += ' <span class="badge" style="background:rgba(255,255,255,0.05);color:' + col + ';border:1px solid ' + col + '">' + inc.actor + '</span>';
+            if (inc.type) html += ' <span style="font-size:8px;letter-spacing:1px;color:var(--text-muted)">' + inc.type.replace(/-/g, ' ').toUpperCase() + '</span>';
+            html += ' <span class="incident-title">' + (inc.title || inc.name || '?') + '</span>';
+            html += '</div>';
+            html += '<div class="incident-body">' + (inc.description || '') + '</div>';
+            html += '<div class="incident-meta">';
+            if (inc.impact) html += '<span>IMPACT: <span style="color:var(--red)">' + inc.impact + '</span></span> ';
+            if (inc.orbit_affected) html += '<span>ORBIT: ' + inc.orbit_affected + '</span> ';
+            if (inc.debris_generated) html += '<span>DEBRIS: <span style="color:var(--cis)">' + inc.debris_generated + '</span></span> ';
+            if (inc.source) html += '<span style="color:var(--text-muted)">SRC: ' + inc.source + '</span>';
+            html += '</div></div>';
+        });
+        html += '</div>';
+        timelineEl.innerHTML = html;
     }
 
     renderTimeline('all');

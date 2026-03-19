@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html><head>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body style="background:#000;color:#0f0;font-family:monospace;padding:20px">
+<div id="log"></div>
+<script>
+function log(msg) {
+    document.getElementById('log').innerHTML += msg + '<br>';
+    console.log(msg);
+}
+window.onerror = function(msg, src, line, col, err) {
+    log('ERROR: ' + msg + ' at ' + src + ':' + line + ':' + col);
+    return true;
+};
+</script>
+<script>
+log('Loading charts.js...');
+</script>
+<script src="/static/js/charts.js?v=5"></script>
+<script>
+log('charts.js OK. Loading satellite.js...');
+</script>
+<script src="/static/js/satellite.js?v=5"></script>
+<script>
+log('satellite.js OK. Loading pages.js...');
+</script>
+<script src="/static/js/pages.js?v=5"></script>
+<script>
+log('pages.js OK. Pages defined: ' + Object.keys(Pages).join(', '));
+log('Loading app.js...');
+</script>
+<script src="/static/js/app.js?v=5"></script>
+<script>
+log('app.js OK. All scripts loaded.');
+log('typeof Pages.cmd = ' + typeof Pages.cmd);
+</script>
+</body></html>
