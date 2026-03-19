@@ -68,6 +68,7 @@ function storeMap(map) {
    ================================================================ */
 Pages.cmd = async function(el) {
     el.innerHTML = `
+        <div class="cmd-page">
         <!-- THREAT STATUS BAR -->
         <div class="threat-bar">
             <div class="tb-cell hostile">
@@ -155,10 +156,20 @@ Pages.cmd = async function(el) {
             <div class="env-cell"><span class="env-lbl">GEOMAG</span><span class="env-val" id="ov-sg">G0</span></div>
             <div class="env-cell"><span class="env-lbl">NEOs</span><span class="env-val" id="ov-neo">--</span></div>
         </div>
+        </div><!-- /cmd-page -->
     `;
 
-    // Init map
-    setTimeout(() => { if (typeof initSatMap === 'function') initSatMap('sat-map'); }, 50);
+    // Init map — delay to let flexbox resolve dimensions, then invalidateSize
+    setTimeout(() => {
+        if (typeof initSatMap === 'function') {
+            initSatMap('sat-map');
+            // Leaflet needs a kick after flex layout resolves
+            if (satMap) {
+                setTimeout(() => satMap.invalidateSize(), 100);
+                setTimeout(() => satMap.invalidateSize(), 500);
+            }
+        }
+    }, 100);
 
     // Fetch all data
     const [advStats, launches, weather, neo, news, criticalSystems, vulns, threatOv, stats] = await Promise.all([
@@ -593,6 +604,7 @@ Pages.orbital = async function(el) {
         L.tileLayer('https://{s}.basemaps-cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(omap);
         addGridOverlay(omap);
         storeMap(omap);
+        setTimeout(() => omap.invalidateSize(), 200);
         allAdv.forEach(s => {
             if (!s.lat || !s.lng) return;
             const col = countryColor(s._nation);
@@ -717,6 +729,7 @@ Pages.ground = async function(el) {
         L.tileLayer('https://{s}.basemaps-cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(gmap);
         addGridOverlay(gmap);
         storeMap(gmap);
+        setTimeout(() => gmap.invalidateSize(), 200);
 
         stations.forEach(s => {
             if (!s.lat || !s.lng) return;

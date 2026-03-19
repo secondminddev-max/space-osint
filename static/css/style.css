@@ -221,6 +221,12 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--bg);
+    min-height: 0;
+}
+
+/* CMD page fills viewport — no scroll */
+#content:has(.cmd-page) {
+    overflow: hidden;
 }
 
 #content::-webkit-scrollbar { width: 4px; }
@@ -317,7 +323,8 @@ body {
     gap: 1px;
     background: rgba(255,176,0,0.05);
     border: 1px solid var(--border);
-    margin-bottom: 2px;
+    margin-bottom: 1px;
+    flex-shrink: 0;
 }
 
 .tb-cell {
@@ -348,9 +355,14 @@ body {
     margin-top: 1px;
 }
 
-.tb-cell.hostile { border-left: 2px solid var(--red); }
-.tb-cell.hostile .tb-val { color: var(--red); }
-.tb-cell.hostile .tb-icon { color: var(--red); }
+.tb-cell.hostile { border-left: 2px solid var(--red); background: rgba(255,32,32,0.03); }
+.tb-cell.hostile .tb-val { color: var(--red); text-shadow: 0 0 8px rgba(255,32,32,0.4); }
+.tb-cell.hostile .tb-icon { color: var(--red); animation: pulse-threat 3s ease-in-out infinite; }
+
+@keyframes pulse-threat {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
 
 .tb-cell.warning { border-left: 2px solid var(--cis); }
 .tb-cell.warning .tb-val { color: var(--cis); }
@@ -387,9 +399,10 @@ body {
 }
 
 .cmd-map-wrap .map-container {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
-    min-height: 0;
 }
 
 /* Map Legend */
@@ -423,14 +436,14 @@ body {
 /* Floating Panels (over map right side) */
 .map-overlay-panels {
     position: absolute;
-    top: 6px;
-    right: 6px;
+    top: 4px;
+    right: 4px;
     z-index: 500;
-    width: 280px;
+    width: 300px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    max-height: calc(100% - 12px);
+    gap: 2px;
+    max-height: calc(100% - 8px);
     overflow-y: auto;
 }
 
@@ -527,8 +540,15 @@ body {
 .cmd-bottom-strip {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 2px;
-    margin-bottom: 2px;
+    gap: 1px;
+    margin-bottom: 1px;
+    flex-shrink: 0;
+    max-height: 150px;
+}
+
+.cmd-bottom-strip .panel-body {
+    max-height: 110px !important;
+    font-size: 10px;
 }
 
 /* ---- Environment Bar ---- */
@@ -537,6 +557,7 @@ body {
     gap: 1px;
     border: 1px solid var(--border);
     background: rgba(255,176,0,0.03);
+    flex-shrink: 0;
 }
 
 .env-cell {
@@ -811,6 +832,7 @@ body {
     min-height: 400px;
     background: #000;
 }
+
 
 /* Leaflet overrides */
 .leaflet-control-zoom a {
