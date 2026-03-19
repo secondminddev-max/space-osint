@@ -20,6 +20,7 @@ from data_sources import (
     proximity_alert, threat_timeline, incident_db,
     overmatch, wargame,
     futures, conferences, architecture,
+    enhanced_feeds,
 )
 
 _client: httpx.AsyncClient = None
@@ -437,6 +438,59 @@ async def api_architecture_fvey():
 async def api_architecture_comparison():
     """Side-by-side comparison of adversary vs FVEY ground capabilities."""
     return JSONResponse(architecture.get_architecture_comparison())
+
+
+# ---- Enhanced Space Environment ----
+
+@app.get("/api/environment/solar-images")
+async def api_solar_images():
+    """Latest solar imagery — SUVI EUV, SDO/HMI, LASCO coronagraph, ENLIL model."""
+    return JSONResponse(await enhanced_feeds.fetch_solar_imagery(_client))
+
+@app.get("/api/environment/aurora")
+async def api_aurora():
+    """Aurora probability grid + forecast imagery (NOAA OVATION model)."""
+    return JSONResponse(await enhanced_feeds.fetch_aurora_data(_client))
+
+@app.get("/api/environment/solar-wind-history")
+async def api_solar_wind_history():
+    """7-day solar wind plasma + magnetic field history."""
+    return JSONResponse(await enhanced_feeds.fetch_solar_wind_history(_client))
+
+@app.get("/api/environment/geospace")
+async def api_geospace():
+    """Propagated solar wind at Earth's magnetopause — real-time driving conditions."""
+    return JSONResponse(await enhanced_feeds.fetch_geospace_data(_client))
+
+@app.get("/api/environment/debris-alerts")
+async def api_debris_alerts():
+    """Space debris awareness — new catalog objects, particle alerts, ICAO advisories."""
+    return JSONResponse(await enhanced_feeds.fetch_debris_alerts(_client))
+
+@app.get("/api/environment/goes")
+async def api_goes_instruments():
+    """GOES satellite instrument data — X-ray, proton flux, magnetometer."""
+    return JSONResponse(await enhanced_feeds.fetch_goes_data(_client))
+
+@app.get("/api/environment/solar-activity")
+async def api_solar_activity():
+    """Solar flare probabilities + active sunspot regions."""
+    return JSONResponse(await enhanced_feeds.fetch_solar_activity(_client))
+
+@app.get("/api/environment/forecasts")
+async def api_forecasts():
+    """Kp forecast, 45-day Ap/F10.7 outlook, electron fluence forecast."""
+    return JSONResponse(await enhanced_feeds.fetch_forecasts(_client))
+
+@app.get("/api/environment/enlil")
+async def api_enlil():
+    """WSA-ENLIL solar wind model — predicted conditions and CME arrivals."""
+    return JSONResponse(await enhanced_feeds.fetch_enlil_model(_client))
+
+@app.get("/api/environment/enhanced")
+async def api_enhanced_environment():
+    """Master composite of ALL enhanced environmental data in one call."""
+    return JSONResponse(await enhanced_feeds.get_enhanced_environment(_client))
 
 
 # ---- System ----
