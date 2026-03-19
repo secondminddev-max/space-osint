@@ -1224,6 +1224,81 @@ Pages.orbital = async function (el) {
             ]), { className: 'sat-popup', closeButton: false }).addTo(omap);
         });
     }, 150);
+
+    // --- AUTO-REFRESH: Orbital satellite positions every 30s ---
+    registerInterval(async function() {
+        var freshResults = await Promise.all([
+            api('/api/adversary/satellites?country=PRC'),
+            api('/api/adversary/satellites?country=CIS'),
+            api('/api/adversary/satellites?country=NKOR'),
+            api('/api/adversary/satellites?country=IRAN'),
+        ]);
+
+        var freshAdv = [];
+        (freshResults[0] || []).forEach(function(s) { freshAdv.push(Object.assign({}, s, { _nation: 'PRC' })); });
+        (freshResults[1] || []).forEach(function(s) { freshAdv.push(Object.assign({}, s, { _nation: 'CIS' })); });
+        (freshResults[2] || []).forEach(function(s) { freshAdv.push(Object.assign({}, s, { _nation: 'NKOR' })); });
+        (freshResults[3] || []).forEach(function(s) { freshAdv.push(Object.assign({}, s, { _nation: 'IRAN' })); });
+
+        if (freshAdv.length === 0) return;
+
+        // Update threat bar counts
+        var freshISR = freshAdv.filter(function(s) { return s.category === 'military_isr'; });
+        var freshSDA = freshAdv.filter(function(s) { return s.category === 'sda_asat'; });
+        var freshNav = freshAdv.filter(function(s) { return s.category === 'navigation'; });
+        var freshComms = freshAdv.filter(function(s) { return s.category === 'comms'; });
+        var freshOther = freshAdv.filter(function(s) { return !['military_isr', 'sda_asat', 'navigation', 'comms'].includes(s.category); });
+
+        var tbVals = el.querySelectorAll('.tb-val');
+        if (tbVals.length >= 6) {
+            tbVals[0].textContent = freshAdv.length;
+            tbVals[1].textContent = freshISR.length;
+            tbVals[2].textContent = freshSDA.length;
+            tbVals[3].textContent = freshNav.length;
+            tbVals[4].textContent = freshComms.length;
+            tbVals[5].textContent = freshOther.length;
+        }
+
+        // Update object count in map header
+        var objCountEl = document.getElementById('orbital-obj-count');
+        if (objCountEl) objCountEl.textContent = freshAdv.length;
+
+        // Update map markers if map exists
+        var existingMaps = window._extraMaps || [];
+        var orbMap = existingMaps.length > 0 ? existingMaps[existingMaps.length - 1] : null;
+        if (orbMap) {
+            try {
+                orbMap.eachLayer(function(layer) {
+                    if (layer instanceof L.CircleMarker && !(layer instanceof L.Circle)) {
+                        orbMap.removeLayer(layer);
+                    }
+                });
+                freshAdv.forEach(function(s) {
+                    if (!s.lat || !s.lng) return;
+                    var col = countryColor(s._nation);
+                    var isISR = s.category === 'military_isr';
+                    var isASAT = s.category === 'sda_asat';
+                    var r = isASAT ? 5 : isISR ? 4 : s.category === 'navigation' ? 3 : 2.5;
+                    L.circleMarker([s.lat, s.lng], {
+                        radius: r, fillColor: col,
+                        fillOpacity: isISR ? 0.9 : isASAT ? 0.8 : 0.5,
+                        color: isISR ? '#fff' : col,
+                        weight: isISR ? 1.5 : isASAT ? 1.5 : 0,
+                        opacity: 0.4,
+                        className: isISR ? 'isr-pulse-marker' : '',
+                    }).addTo(orbMap);
+                });
+            } catch (e) {
+                // Map may have been destroyed
+            }
+        }
+
+        // Update timestamps
+        var mapTsEl = document.getElementById('orbital-map-ts');
+        if (mapTsEl) mapTsEl.textContent = zulu();
+        var liveTsEl = document.getElementById('orbital-live-ts');
+        if (liveTsEl) liveTsEl.textContent = zulu();
+    }, 30000);
 };
 
 
@@ -1265,6 +1340,7 @@ Pages.launches = async function (el) {
             '<div class="tb-cell hostile"><div class="tb-icon">&#9760;</div><div><div class="tb-val">' + advLaunches.length + '</div><div class="tb-lbl">ADVERSARY</div></div></div>' +
             '<div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + fveyLaunches.length + '</div><div class="tb-lbl">ALLIED / OTHER</div></div></div>' +
             '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + data.length + '</div><div class="tb-lbl">TOTAL UPCOMING</div></div></div>' +
+            '<div class="tb-cell"><div><div class="tb-val"><span class="live-indicator"><span class="live-dot"></span> LIVE</span></div><div class="tb-lbl">120S DATA <span id="launch-live-ts" class="last-updated-ts">' + zulu() + '</span></div></div></div>' +
         '</div>' +
         '<div class="grid-2">' +
             '<div class="panel">' +
@@ -1306,6 +1382,43 @@ Pages.launches = async function (el) {
         renderLaunchList(document.getElementById('launch-adv'), advLaunches);
         renderLaunchList(document.getElementById('launch-fvey'), fveyLaunches);
     }, 1000);
+
+    // --- AUTO-REFRESH: Launch data every 120s ---
+    registerInterval(async function() {
+        var freshData = await api('/api/launches');
+        if (!freshData) return;
+        freshData.forEach(function(l) { l._isAdv = isAdvLaunch(l); });
+        advLaunches = freshData.filter(function(l) { return l._isAdv; });
+        fveyLaunches = freshData.filter(function(l) { return !l._isAdv; });
+
+        // Update next adversary launch
+        nextAdv = null;
+        for (var li = 0; li < advLaunches.length; li++) {
+            if (advLaunches[li].net && new Date(advLaunches[li].net).getTime() > Date.now()) {
+                nextAdv = advLaunches[li];
+                break;
+            }
+        }
+
+        // Update hero section
+        var heroSection = document.getElementById('launch-hero');
+        if (heroSection && nextAdv) {
+            heroSection.querySelector('.launch-hero-name').textContent = nextAdv.name;
+            heroSection.querySelector('.launch-hero-meta').textContent = (nextAdv.provider || '?') + ' | ' + (nextAdv.rocket || '?') + ' | ' + (nextAdv.pad_location || '?');
+        }
+
+        // Update threat bar counts
+        var tbVals = el.querySelectorAll('.tb-val');
+        if (tbVals.length >= 3) {
+            tbVals[0].textContent = advLaunches.length;
+            tbVals[1].textContent = fveyLaunches.length;
+            tbVals[2].textContent = freshData.length;
+        }
+
+        // Update live timestamp
+        var launchTsEl = document.getElementById('launch-live-ts');
+        if (launchTsEl) launchTsEl.textContent = zulu();
+    }, 120000);
 };
 
 
@@ -1847,11 +1960,13 @@ Pages.strategy = async function (el) {
             '<div class="panel-body" style="padding:0"><div id="strategy-hotspot-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div>' +
         '</div><div class="grid-3 mb-4">' + hotspotCardsHtml + '</div>' : '') +
         '<div class="grid-2">' +
-            '<div class="panel"><div class="panel-head"><h3>INTELLIGENCE RESEARCH FEED</h3><span class="ph-meta">' + research.length + ' ITEMS</span></div>' +
-                '<div class="panel-body" style="max-height:400px">' + researchHtml + '</div></div>' +
-            '<div class="panel"><div class="panel-head"><h3>ACADEMIC / ARXIV PAPERS</h3><span class="ph-meta">' + arxiv.length + ' PAPERS</span></div>' +
-                '<div class="panel-body" style="max-height:400px">' + arxivHtml + '</div></div>' +
-        '</div></div>';
+            '<div class="panel"><div class="panel-head"><h3>INTELLIGENCE RESEARCH FEED</h3><span class="ph-meta">' + research.length + ' ITEMS ' + liveIndicator('300S') + '</span></div>' +
+                '<div class="panel-body" style="max-height:400px" id="strategy-research-body">' + researchHtml + '</div></div>' +
+            '<div class="panel"><div class="panel-head"><h3>ACADEMIC / ARXIV PAPERS</h3><span class="ph-meta">' + arxiv.length + ' PAPERS ' + liveIndicator('300S') + '</span></div>' +
+                '<div class="panel-body" style="max-height:400px" id="strategy-arxiv-body">' + arxivHtml + '</div></div>' +
+        '</div>' +
+        '<div style="text-align:center;padding:4px;font-size:7px;letter-spacing:1.5px;color:var(--text-muted)"><span class="live-indicator"><span class="live-dot"></span> LIVE</span> STRATEGY FEEDS AUTO-REFRESH 300S | LAST: <span id="strategy-live-ts">' + zulu() + '</span></div>' +
+        '</div>';
 
     // Hotspot map
     if (hs.length) {
@@ -1889,6 +2004,48 @@ Pages.strategy = async function (el) {
             });
         }, 150);
     }
+
+    // --- AUTO-REFRESH: Research & Arxiv feeds every 300s ---
+    registerInterval(async function() {
+        var freshFeeds = await Promise.all([
+            api('/api/intel/research'),
+            api('/api/intel/arxiv'),
+        ]);
+
+        var freshResearch = freshFeeds[0] || [];
+        var freshArxiv = freshFeeds[1] || [];
+
+        // Update research feed
+        var resBodyEl = document.getElementById('strategy-research-body');
+        if (resBodyEl && freshResearch.length) {
+            var rHtml = '';
+            freshResearch.slice(0, 12).forEach(function(r) {
+                rHtml += '<a href="' + (r.url || '#') + '" target="_blank" rel="noopener" class="news-line">' +
+                    '<span class="nl-title">' + r.title + '</span>' +
+                    '<span class="nl-meta">' + (r.source || 'OSINT') + (r.relevance_tag ? ' // ' + r.relevance_tag : '') + ' // ' + (r.published_at ? timeAgo(r.published_at) : '') + '</span>' +
+                    (r.summary ? '<div style="font-size:8px;color:var(--text-muted);line-height:1.3;margin-top:1px">' + r.summary.substring(0, 120) + (r.summary.length > 120 ? '...' : '') + '</div>' : '') +
+                    '</a>';
+            });
+            resBodyEl.innerHTML = rHtml || '<div class="empty-state">NO RESEARCH DATA</div>';
+        }
+
+        // Update arxiv feed
+        var arxBodyEl = document.getElementById('strategy-arxiv-body');
+        if (arxBodyEl && freshArxiv.length) {
+            var aHtml = '';
+            freshArxiv.slice(0, 12).forEach(function(a) {
+                aHtml += '<a href="' + (a.url || '#') + '" target="_blank" rel="noopener" class="news-line">' +
+                    '<span class="nl-title">' + a.title + '</span>' +
+                    '<span class="nl-meta">' + (a.source || 'arXiv') + (a.relevance_tag ? ' // ' + a.relevance_tag : '') + ' // ' + (a.published_at ? timeAgo(a.published_at) : '') + '</span>' +
+                    (a.summary ? '<div style="font-size:8px;color:var(--text-muted);line-height:1.3;margin-top:1px">' + a.summary.substring(0, 120) + (a.summary.length > 120 ? '...' : '') + '</div>' : '') +
+                    '</a>';
+            });
+            arxBodyEl.innerHTML = aHtml || '<div class="empty-state">NO ARXIV DATA</div>';
+        }
+
+        var stratTsEl = document.getElementById('strategy-live-ts');
+        if (stratTsEl) stratTsEl.textContent = zulu();
+    }, 300000);
 };
 
 
@@ -2022,9 +2179,10 @@ Pages.overmatch = async function (el) {
         '</div>' +
         '<div class="panel mb-2"><div class="panel-head"><h3>CONTESTED ZONES // OVERMATCH MAP</h3><span class="ph-meta">' + zones.length + ' ZONES | ' + zulu() + '</span></div>' +
             '<div class="panel-body" style="padding:0"><div id="overmatch-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div></div>' +
-        '<div class="section-head">ZONE OVERMATCH BREAKDOWN // 6 DOMAINS</div>' +
-        '<div class="grid-3 mb-4">' + zoneCardsHtml + '</div>' +
+        '<div class="section-head">ZONE OVERMATCH BREAKDOWN // 6 DOMAINS <span class="live-indicator" style="float:right"><span class="live-dot"></span> LIVE 120S</span></div>' +
+        '<div class="grid-3 mb-4" id="overmatch-zone-cards">' + zoneCardsHtml + '</div>' +
         recsHtml +
+        '<div style="text-align:center;padding:4px;font-size:7px;letter-spacing:1.5px;color:var(--text-muted)"><span class="live-indicator"><span class="live-dot"></span> LIVE</span> OVERMATCH SCORES AUTO-REFRESH 120S | LAST: <span id="overmatch-live-ts">' + zulu() + '</span></div>' +
         '</div>';
 
     // Overmatch map
@@ -2076,6 +2234,77 @@ Pages.overmatch = async function (el) {
             ]), { className: 'sat-popup', closeButton: false }).addTo(omap);
         });
     }, 200);
+
+    // --- AUTO-REFRESH: Overmatch scores every 120s ---
+    registerInterval(async function() {
+        var freshOM = null;
+        var freshSummary = null;
+        try {
+            var freshResults = await Promise.all([
+                api('/api/overmatch'),
+                api('/api/overmatch/summary'),
+            ]);
+            freshOM = freshResults[0];
+            freshSummary = freshResults[1];
+        } catch (e) {
+            return;
+        }
+
+        if (!freshOM || !freshOM.zones) return;
+        var freshZones = freshOM.zones;
+
+        // Update global score in banner
+        var freshGlobalScore = (freshSummary && freshSummary.global_overmatch) || (freshSummary && freshSummary.overall_score) || Math.round(freshZones.reduce(function(a, z) { return a + (z.overmatch_score || 0); }, 0) / freshZones.length);
+        var freshGlobalVerdict = overmatchVerdict(freshGlobalScore);
+
+        // Update global score display
+        var globalScoreEl = el.querySelector('.overmatch-global-score');
+        if (globalScoreEl) {
+            globalScoreEl.textContent = (freshGlobalScore > 0 ? '+' : '') + Math.round(freshGlobalScore);
+            globalScoreEl.style.color = overmatchColor(freshGlobalScore);
+            globalScoreEl.style.textShadow = '0 0 15px ' + overmatchColor(freshGlobalScore);
+        }
+        var globalVerdictEl = el.querySelector('.overmatch-global-verdict');
+        if (globalVerdictEl) {
+            globalVerdictEl.textContent = freshGlobalVerdict.text;
+            globalVerdictEl.style.color = overmatchColor(freshGlobalScore);
+        }
+
+        // Update zone cards
+        var zoneContainer = document.getElementById('overmatch-zone-cards');
+        if (zoneContainer) {
+            var freshZoneHtml = '';
+            freshZones.forEach(function(z) {
+                var zScore = z.overmatch_score || 0;
+                var zVerdict = overmatchVerdict(zScore);
+                var dm = z.domains || {};
+                var domainBarsHtml = '';
+                var domainMiniHtml = '';
+                domains.forEach(function(d) {
+                    domainBarsHtml += buildOvermatchBar(d, dm[d] || 0);
+                    var dScore = dm[d] || 0;
+                    domainMiniHtml += '<div class="domain-score-card">' +
+                        '<div class="domain-score-label">' + d + '</div>' +
+                        '<div class="domain-score-val" style="color:' + overmatchColor(dScore) + '">' + (dScore > 0 ? '+' : '') + dScore + '</div>' +
+                        '</div>';
+                });
+                freshZoneHtml += '<div class="overmatch-zone-card">' +
+                    '<div class="overmatch-zone-header">' +
+                        '<span class="overmatch-zone-name">' + z.zone + '</span>' +
+                        '<span class="overmatch-zone-score" style="color:' + overmatchColor(zScore) + '">' + (zScore > 0 ? '+' : '') + zScore + '</span>' +
+                    '</div>' +
+                    '<div class="overmatch-zone-body">' +
+                        '<div style="margin-bottom:6px"><span class="overmatch-zone-verdict ' + zVerdict.cls + '">' + zVerdict.text + '</span></div>' +
+                        domainBarsHtml +
+                        '<div class="domain-scores-grid">' + domainMiniHtml + '</div>' +
+                    '</div></div>';
+            });
+            zoneContainer.innerHTML = freshZoneHtml;
+        }
+
+        var omTsEl = document.getElementById('overmatch-live-ts');
+        if (omTsEl) omTsEl.textContent = zulu();
+    }, 120000);
 };
 
 
@@ -2493,6 +2722,7 @@ Pages.conferences = async function(el) {
         '<div class="threat-bar mb-2">' +
             '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + events.length + '</div><div class="tb-lbl">TRACKED EVENTS</div></div></div>' +
             '<div class="tb-cell alert"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + highCount + '</div><div class="tb-lbl">HIGH RELEVANCE</div></div></div>' +
+            '<div class="tb-cell"><div><div class="tb-val"><span class="live-indicator"><span class="live-dot"></span> LIVE</span></div><div class="tb-lbl">600S REFRESH <span id="conf-live-ts" class="last-updated-ts">' + zulu() + '</span></div></div></div>' +
         '</div>' +
         '<div class="filter-tabs mb-2" id="conf-tabs">' +
             '<div class="filter-tab active" data-filter="all">ALL</div>' +
@@ -2546,6 +2776,24 @@ Pages.conferences = async function(el) {
             renderConfs(tab.dataset.filter);
         });
     });
+
+    // --- AUTO-REFRESH: Conference events every 600s ---
+    registerInterval(async function() {
+        var freshResults = await Promise.all([
+            api('/api/conferences/upcoming'),
+            api('/api/conferences'),
+        ]);
+        var freshEvents = Array.isArray(freshResults[0]) ? freshResults[0] : (Array.isArray(freshResults[1]) ? freshResults[1] : []);
+        if (freshEvents.length > 0) {
+            events = freshEvents;
+            // Re-render with current filter
+            var activeConfTab = el.querySelector('#conf-tabs .filter-tab.active');
+            var currentFilter = activeConfTab ? activeConfTab.dataset.filter : 'all';
+            renderConfs(currentFilter);
+        }
+        var confTsEl = document.getElementById('conf-live-ts');
+        if (confTsEl) confTsEl.textContent = zulu();
+    }, 600000);
 };
 
 
@@ -3140,18 +3388,105 @@ Pages.environment = async function (el) {
 
     // ---- TIMESTAMP ----
     html += '<div style="text-align:center;padding:6px;font-size:8px;letter-spacing:2px;color:var(--text-muted)">' +
-        'ENVIRONMENT DATA COMPOSITE // UPDATED ' + zuluFull() + ' // AUTO-REFRESH 120S' +
+        '<span class="live-indicator"><span class="live-dot"></span> LIVE</span> ENVIRONMENT DATA COMPOSITE // UPDATED <span id="env-live-ts">' + zuluFull() + '</span> // AUTO-REFRESH 60S' +
         '</div>';
 
     html += '</div>'; // end page-wrap
 
     el.innerHTML = html;
 
-    // ---- AUTO-REFRESH every 120s ----
+    // ---- AUTO-REFRESH: Targeted status strip update every 60s ----
     registerInterval(async function() {
         var freshEnv = await api('/api/environment/enhanced');
-        if (freshEnv) {
-            Pages.environment(el);
+        if (!freshEnv) return;
+
+        var freshGoes = freshEnv.goes_instruments || {};
+        var freshAurora = freshEnv.aurora || {};
+        var freshGeospace = freshEnv.geospace || {};
+        var freshForecasts = freshEnv.forecasts || {};
+
+        // Update X-ray status cell
+        var freshXrayData = freshGoes.xray || {};
+        var freshXrayLatest = freshXrayData.latest || {};
+        var freshXrayKeys = Object.keys(freshXrayLatest);
+        if (freshXrayKeys.length > 0) {
+            var freshFirstXray = freshXrayLatest[freshXrayKeys[0]];
+            var freshFlux = freshFirstXray ? freshFirstXray.flux : null;
+            if (freshFlux != null) {
+                var freshXLevel = 'A';
+                var freshXColor = 'var(--green)';
+                if (freshFlux >= 1e-4) { freshXLevel = 'X'; freshXColor = 'var(--red)'; }
+                else if (freshFlux >= 1e-5) { freshXLevel = 'M'; freshXColor = 'var(--cis)'; }
+                else if (freshFlux >= 1e-6) { freshXLevel = 'C'; freshXColor = 'var(--amber)'; }
+                else if (freshFlux >= 1e-7) { freshXLevel = 'B'; freshXColor = 'var(--green)'; }
+                freshXLevel += ' (' + freshFlux.toExponential(1) + ')';
+                var statusVals = el.querySelectorAll('.env-status-val');
+                if (statusVals.length >= 1) {
+                    statusVals[0].textContent = freshXLevel;
+                    statusVals[0].style.color = freshXColor;
+                }
+            }
         }
-    }, 120000);
+
+        // Update proton status cell
+        var freshProtonData = freshGoes.protons || {};
+        var freshProtonLatest = freshProtonData.latest || {};
+        var freshProtonKeys = Object.keys(freshProtonLatest);
+        var freshProtonAlert = 'NOMINAL';
+        var freshProtonColor = 'var(--green)';
+        for (var fpi = 0; fpi < freshProtonKeys.length; fpi++) {
+            if (freshProtonKeys[fpi].indexOf('10') >= 0) {
+                var fpFlux = freshProtonLatest[freshProtonKeys[fpi]] ? freshProtonLatest[freshProtonKeys[fpi]].flux : null;
+                if (fpFlux != null && fpFlux >= 10) {
+                    freshProtonAlert = 'S1+ STORM';
+                    freshProtonColor = 'var(--red)';
+                }
+                break;
+            }
+        }
+        var statusVals2 = el.querySelectorAll('.env-status-val');
+        if (statusVals2.length >= 2) {
+            statusVals2[1].textContent = freshProtonAlert;
+            statusVals2[1].style.color = freshProtonColor;
+        }
+
+        // Update Kp forecast cell
+        var freshKpEntries = (freshForecasts.kp_forecast || {}).entries || [];
+        if (freshKpEntries.length > 0 && statusVals2.length >= 3) {
+            var freshKpVal = freshKpEntries[0].kp;
+            var freshKpColor = 'var(--green)';
+            if (parseFloat(freshKpVal) >= 7) freshKpColor = 'var(--red)';
+            else if (parseFloat(freshKpVal) >= 5) freshKpColor = 'var(--cis)';
+            else if (parseFloat(freshKpVal) >= 4) freshKpColor = 'var(--amber)';
+            statusVals2[2].textContent = 'Kp ' + String(freshKpVal);
+            statusVals2[2].style.color = freshKpColor;
+        }
+
+        // Update Bz cell
+        var freshGeoLatest = freshGeospace.latest || {};
+        if (freshGeoLatest.bz != null && statusVals2.length >= 4) {
+            var freshBz = freshGeoLatest.bz;
+            var freshBzColor = freshBz < -10 ? 'var(--red)' : freshBz < 0 ? 'var(--cis)' : 'var(--green)';
+            statusVals2[3].textContent = freshBz.toFixed(1) + ' nT';
+            statusVals2[3].style.color = freshBzColor;
+        }
+
+        // Update solar wind cell
+        if (freshGeoLatest.speed != null && statusVals2.length >= 5) {
+            var freshWindColor = freshGeoLatest.speed > 700 ? 'var(--red)' : freshGeoLatest.speed > 500 ? 'var(--cis)' : 'var(--cyan)';
+            statusVals2[4].textContent = Math.round(freshGeoLatest.speed) + ' km/s';
+            statusVals2[4].style.color = freshWindColor;
+        }
+
+        // Update aurora cell
+        if (freshAurora.max_probability != null && statusVals2.length >= 6) {
+            var freshAuroraColor = freshAurora.max_probability >= 50 ? 'var(--red)' : freshAurora.max_probability >= 25 ? 'var(--amber)' : 'var(--green)';
+            statusVals2[5].textContent = freshAurora.max_probability + '%';
+            statusVals2[5].style.color = freshAuroraColor;
+        }
+
+        // Update timestamp
+        var envTsEl = document.getElementById('env-live-ts');
+        if (envTsEl) envTsEl.textContent = zuluFull();
+    }, 60000);
 };

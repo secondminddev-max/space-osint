@@ -24,6 +24,8 @@ from data_sources import (
     deep_analysis,
     advanced_intel,
     deduction_engine,
+    final_features,
+    global_feeds,
 )
 
 _client: httpx.AsyncClient = None
@@ -590,6 +592,87 @@ async def api_deductions_narrative():
     return JSONResponse(await deduction_engine.generate_threat_narrative(_client))
 
 
+# ---- Final Features: Alliance / IPOE / SIGINT / Debris / Cislunar ----
+
+@app.get("/api/analysis/alliances")
+async def api_alliances():
+    """AUKUS/FVEY/CSpO/NATO/Quad space cooperation status and allied ground segment."""
+    return JSONResponse(final_features.get_alliance_status())
+
+@app.get("/api/analysis/ipoe")
+async def api_ipoe():
+    """Space Intelligence Preparation of the Operating Environment (IPOE) — JP 2-01.3 format."""
+    return JSONResponse(await final_features.generate_space_ipoe(_client))
+
+@app.get("/api/analysis/maneuver-indicators")
+async def api_maneuver_indicators():
+    """Satellite maneuver detection indicators — intelligence analyst watchlist."""
+    return JSONResponse(final_features.get_maneuver_indicators())
+
+@app.get("/api/analysis/sigint-mapping")
+async def api_sigint_mapping():
+    """Adversary SIGINT/ELINT constellation intelligence map — PRC and Russia."""
+    return JSONResponse(final_features.get_sigint_mapping())
+
+@app.get("/api/analysis/debris-environment")
+async def api_debris_environment():
+    """Comprehensive space debris environment assessment — catalog, trends, FVEY impact."""
+    return JSONResponse(final_features.get_debris_environment())
+
+@app.get("/api/analysis/cislunar")
+async def api_cislunar():
+    """Cislunar space domain awareness — beyond-GEO objects, lunar missions, surveillance gaps."""
+    return JSONResponse(final_features.get_cislunar_status())
+
+
+# ---- Global Space Environment Feeds ----
+
+@app.get("/api/global/ionosphere")
+async def api_global_ionosphere():
+    """Global ionospheric TEC map — GPS scintillation and comms impact assessment."""
+    return JSONResponse(await global_feeds.fetch_ionosphere_data(_client))
+
+@app.get("/api/global/dscovr")
+async def api_global_dscovr():
+    """DSCOVR/ACE real-time solar wind at L1 — 15-45 min advance warning for storms."""
+    return JSONResponse(await global_feeds.fetch_dscovr_data(_client))
+
+@app.get("/api/global/earth-events")
+async def api_global_earth_events():
+    """NASA EONET natural events — volcanoes, storms, wildfires affecting ops."""
+    return JSONResponse(await global_feeds.fetch_earth_events(_client))
+
+@app.get("/api/global/radiation")
+async def api_global_radiation():
+    """Van Allen radiation belt conditions + Dst magnetosphere index."""
+    return JSONResponse(await global_feeds.fetch_radiation_belts(_client))
+
+@app.get("/api/global/earthquakes")
+async def api_global_earthquakes():
+    """USGS seismic events M4+ — nuclear test site proximity alerting."""
+    return JSONResponse(await global_feeds.fetch_earthquakes(_client))
+
+@app.get("/api/global/solar-radio")
+async def api_global_solar_radio():
+    """Multi-frequency solar radio flux — RF interference in military bands."""
+    return JSONResponse(await global_feeds.fetch_solar_radio(_client))
+
+@app.get("/api/global/epic")
+async def api_global_epic():
+    """NASA EPIC — DSCOVR full-disk Earth imagery from L1 Lagrange point."""
+    return JSONResponse(await global_feeds.fetch_epic_imagery(_client))
+
+@app.get("/api/global/satnogs")
+async def api_global_satnogs():
+    """SatNOGS community satellite database — amateur radio observations."""
+    return JSONResponse(await global_feeds.fetch_satnogs_satellites(_client))
+
+@app.get("/api/global/all")
+async def api_global_all():
+    """Master composite of ALL global environment feeds in one call."""
+    return JSONResponse(await global_feeds.fetch_global_composite(_client))
+
+
 # ---- System ----
 
 @app.get("/api/status")
@@ -597,9 +680,10 @@ async def api_status():
     return JSONResponse({
         "service": "ECHELON VANTAGE — Space Domain Awareness",
         "status": "operational",
-        "version": "4.0.0",
+        "version": "6.0.0",
         "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
         "operator": "Echelon Vantage Pty Ltd — Australia",
+        "capabilities": 77,
     })
 
 
