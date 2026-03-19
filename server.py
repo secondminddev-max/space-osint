@@ -17,6 +17,7 @@ from data_sources import (
     space_weather, news, launches, neo, astronauts, donki, celestrak,
     adversary_sats, ground_stations, missile_intel, threat_assessment,
     researcher, live_intel, social_monitor,
+    proximity_alert, threat_timeline, incident_db,
 )
 
 _client: httpx.AsyncClient = None
@@ -236,6 +237,75 @@ async def api_intel_coverage(
 async def api_intel_social():
     """Social media intelligence feed — Bluesky and Reddit."""
     return JSONResponse(await social_monitor.fetch_social_intel(_client))
+
+
+# ---- FVEY Proximity Alerting ----
+
+@app.get("/api/intel/proximity")
+async def api_proximity_alerts(threshold: float = Query(500, description="Alert threshold in km")):
+    """FVEY asset proximity alerting — adversary sats near FVEY military sats."""
+    return JSONResponse(await proximity_alert.check_proximity_alerts(_client, threshold))
+
+@app.get("/api/intel/proximity/history")
+async def api_proximity_history():
+    """Rolling history of close-approach events."""
+    return JSONResponse(await proximity_alert.get_proximity_history(_client))
+
+
+# ---- Predictive Threat Timelines ----
+
+@app.get("/api/intel/predict")
+async def api_predict_timeline(
+    lat: float = Query(23.5, description="Latitude of area of interest"),
+    lng: float = Query(120.5, description="Longitude of area of interest"),
+    name: str = Query("Custom AOI", description="Name of the area"),
+    hours: int = Query(72, description="Prediction window in hours (max 72)"),
+):
+    """72-hour predictive adversary ISR coverage timeline for an area of interest."""
+    hours = min(hours, 72)
+    return JSONResponse(
+        await threat_timeline.predict_coverage_timeline(_client, lat, lng, name, hours)
+    )
+
+@app.get("/api/intel/predict/hotspots")
+async def api_predict_hotspots():
+    """72-hour predictive coverage timelines for all strategic hotspots."""
+    return JSONResponse(await threat_timeline.predict_all_hotspot_timelines(_client))
+
+@app.get("/api/intel/coverage-density")
+async def api_coverage_density(
+    lat: float = Query(23.5, description="Latitude of area of interest"),
+    lng: float = Query(120.5, description="Longitude of area of interest"),
+    hours: int = Query(24, description="Analysis window in hours (max 72)"),
+):
+    """Hourly adversary ISR satellite coverage density over an area."""
+    hours = min(hours, 72)
+    return JSONResponse(
+        await threat_timeline.get_coverage_density(_client, lat, lng, hours)
+    )
+
+
+# ---- Space Security Incident Database ----
+
+@app.get("/api/incidents/stats")
+async def api_incident_stats():
+    """Space security incident summary statistics."""
+    return JSONResponse(incident_db.get_incident_stats())
+
+@app.get("/api/incidents")
+async def api_incidents(
+    type: str = Query("", description="Filter by type: DA-ASAT, co-orbital, cyber, collision, EW, test"),
+    actor: str = Query("", description="Filter by actor: PRC, CIS, US, India, Iran"),
+    year: int = Query(0, description="Filter by year"),
+):
+    """Historical space security incident database — all documented events."""
+    if type:
+        return JSONResponse(incident_db.get_incidents_by_type(type))
+    if actor:
+        return JSONResponse(incident_db.get_incidents_by_actor(actor))
+    if year > 0:
+        return JSONResponse(incident_db.get_incidents_by_year(year))
+    return JSONResponse(incident_db.get_all_incidents())
 
 
 # ---- System ----
