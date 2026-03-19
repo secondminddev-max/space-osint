@@ -73,20 +73,41 @@ def _gmst(jd, jd_frac):
     return gmst_rad
 
 
+_RENDER_PROXY = "https://echelon-vantage.onrender.com/api/catalog-proxy"
+
+
 async def fetch_catalog(client: httpx.AsyncClient, group: str = "active") -> list:
-    """Fetch GP elements from CelesTrak for a satellite group."""
+    """Fetch GP elements from CelesTrak for a satellite group.
+    Falls back to Render proxy if CelesTrak is unreachable."""
     cache_key = f"catalog_{group}"
     now = time.time()
     cached = _cache.get(cache_key)
     if cached and (now - cached["ts"]) < CACHE_TTL_TLE_CATALOG:
         return cached["data"]
 
+    data = []
+
+    # Try CelesTrak directly
     url = f"{_BASE}?GROUP={group}&FORMAT=json"
     try:
-        r = await client.get(url, timeout=60)
+        r = await client.get(url, timeout=20)
         r.raise_for_status()
         data = r.json()
     except Exception:
+        pass
+
+    # Fallback: fetch via Render proxy (which can reach CelesTrak)
+    if not data:
+        try:
+            r = await client.get(f"{_RENDER_PROXY}?group={group}", timeout=90)
+            r.raise_for_status()
+            data = r.json()
+            if data:
+                print(f"[CELESTRAK] Loaded {len(data)} objects via Render proxy for group={group}")
+        except Exception:
+            pass
+
+    if not data:
         return _cache.get(cache_key, {}).get("data", [])
 
     _cache[cache_key] = {"data": data, "ts": now}

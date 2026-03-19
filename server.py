@@ -63,6 +63,15 @@ async def landing():
     return FileResponse(os.path.join(static_dir, "landing.html"))
 
 
+# ---- Catalog Proxy (allows instances with blocked CelesTrak to fetch via this server) ----
+
+@app.get("/api/catalog-proxy")
+async def api_catalog_proxy(group: str = "active"):
+    """Proxy CelesTrak GP data for instances where CelesTrak is blocked."""
+    data = await celestrak.fetch_catalog(_client, group)
+    return JSONResponse(data)
+
+
 # ---- Live Data APIs ----
 
 @app.get("/api/satellites")
