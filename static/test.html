@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Map Test</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+body { margin: 0; background: #000; color: #fff; font-family: monospace; }
+#test-map { width: 100vw; height: 80vh; }
+#info { padding: 10px; }
+</style>
+</head>
+<body>
+<div id="info">MAP TEST - If you see a dark map below, Leaflet works.</div>
+<div id="test-map"></div>
+<script>
+try {
+    var map = L.map('test-map', { center: [20, 0], zoom: 2, attributionControl: false });
+    // Try multiple tile providers
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+// Make background dark even if tiles are light
+map.getContainer().style.background = '#000';
+
+    // Add a red dot for PRC satellite
+    L.circleMarker([39.9, 116.4], { radius: 8, fillColor: '#FF2020', fillOpacity: 0.8, color: '#FF2020', weight: 2 })
+        .bindPopup('<b style="color:#FF2020">TEST MARKER - BEIJING</b>')
+        .addTo(map);
+
+    document.getElementById('info').textContent = 'MAP LOADED OK - Leaflet v' + L.version;
+} catch(e) {
+    document.getElementById('info').textContent = 'MAP ERROR: ' + e.message;
+}
+</script>
+</body>
+</html>

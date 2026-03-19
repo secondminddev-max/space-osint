@@ -856,6 +856,11 @@ body {
     background: #000 !important;
 }
 
+/* Invert + darken OSM tiles to look like a military dark map */
+.leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.6) contrast(1.2) saturate(0.3);
+}
+
 /* Sat popup override */
 .sat-popup .leaflet-popup-content-wrapper {
     background: rgba(0,0,0,0.95) !important;

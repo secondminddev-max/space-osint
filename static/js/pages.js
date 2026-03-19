@@ -610,7 +610,7 @@ Pages.orbital = async function(el) {
 
     setTimeout(() => {
         const omap = L.map('orbital-map', { center: [20, 0], zoom: 2, minZoom: 2, maxZoom: 8, attributionControl: false });
-        L.tileLayer('https://{s}.basemaps-cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(omap);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(omap);
         addGridOverlay(omap);
         storeMap(omap);
         setTimeout(() => omap.invalidateSize(), 200);
@@ -735,7 +735,7 @@ Pages.ground = async function(el) {
 
     setTimeout(() => {
         const gmap = L.map('gs-map', { center: [25, 60], zoom: 3, minZoom: 2, maxZoom: 10, attributionControl: false });
-        L.tileLayer('https://{s}.basemaps-cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd' }).addTo(gmap);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(gmap);
         addGridOverlay(gmap);
         storeMap(gmap);
         setTimeout(() => gmap.invalidateSize(), 200);
