@@ -371,25 +371,17 @@ async def fetch_catalog(client: httpx.AsyncClient, group: str = "active") -> lis
 
     data = []
 
-    # Try CelesTrak directly
+    # Try CelesTrak directly (3s timeout — fast fail to seed catalog)
     url = f"{_BASE}?GROUP={group}&FORMAT=json"
     try:
-        r = await client.get(url, timeout=20)
+        r = await client.get(url, timeout=3)
         r.raise_for_status()
         data = r.json()
     except Exception:
         pass
 
-    # Fallback: fetch via Render proxy (which can reach CelesTrak)
-    if not data:
-        try:
-            r = await client.get(f"{_RENDER_PROXY}?group={group}", timeout=90)
-            r.raise_for_status()
-            data = r.json()
-            if data:
-                print(f"[CELESTRAK] Loaded {len(data)} objects via Render proxy for group={group}")
-        except Exception:
-            pass
+    # Skip Render proxy if CelesTrak failed (it's usually down too, wastes time)
+    # Go straight to seed catalog for instant response
 
     # Last-resort fallback: use seed catalog (always use latest seed, not stale cache)
     if not data:
