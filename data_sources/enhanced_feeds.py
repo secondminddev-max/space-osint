@@ -918,6 +918,14 @@ async def get_enhanced_environment(client: httpx.AsyncClient) -> Dict[str, Any]:
     if cached is not None:
         return cached
 
+    # Use asyncio.wait_for with 8s timeout per sub-fetch
+    # If any sub-fetch is slow, return empty dict instead of blocking everything
+    async def _safe_fetch(coro):
+        try:
+            return await asyncio.wait_for(coro, timeout=8.0)
+        except Exception:
+            return {}
+
     (
         imagery,
         aurora,
@@ -929,15 +937,15 @@ async def get_enhanced_environment(client: httpx.AsyncClient) -> Dict[str, Any]:
         forecasts,
         enlil,
     ) = await asyncio.gather(
-        fetch_solar_imagery(client),
-        fetch_aurora_data(client),
-        fetch_solar_wind_history(client),
-        fetch_geospace_data(client),
-        fetch_debris_alerts(client),
-        fetch_goes_data(client),
-        fetch_solar_activity(client),
-        fetch_forecasts(client),
-        fetch_enlil_model(client),
+        _safe_fetch(fetch_solar_imagery(client)),
+        _safe_fetch(fetch_aurora_data(client)),
+        _safe_fetch(fetch_solar_wind_history(client)),
+        _safe_fetch(fetch_geospace_data(client)),
+        _safe_fetch(fetch_debris_alerts(client)),
+        _safe_fetch(fetch_goes_data(client)),
+        _safe_fetch(fetch_solar_activity(client)),
+        _safe_fetch(fetch_forecasts(client)),
+        _safe_fetch(fetch_enlil_model(client)),
     )
 
     data: Dict[str, Any] = {

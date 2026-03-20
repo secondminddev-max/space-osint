@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     _client = httpx.AsyncClient(
         headers={"User-Agent": "SpaceOSINT/1.0"},
         follow_redirects=True,
-        timeout=60,
+        timeout=10,
     )
     try:
         await celestrak.fetch_catalog(_client, "stations")
