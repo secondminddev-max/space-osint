@@ -2928,8 +2928,9 @@ Pages.incidents = async function (el) {
         api('/api/incidents/stats'),
     ]);
 
-    var all = results[0] || [];
+    var rawInc = results[0] || {};
     var incStats = results[1] || {};
+    var all = Array.isArray(rawInc) ? rawInc : (rawInc.incidents || []);
     if (!all.length) { el.innerHTML = '<div class="empty-state">INCIDENT DATA UNAVAILABLE</div>'; return; }
 
     var byType = incStats.by_type || {};
@@ -3123,9 +3124,9 @@ Pages.futures = async function(el) {
     var summary = results[1];
     if (!data) { el.innerHTML = '<div class="empty-state">FUTURES DATA UNAVAILABLE</div>'; return; }
 
-    var programs = Array.isArray(data) ? data : [];
-    var advCount = programs.filter(function(p) { return ['PRC','Russia','DPRK','Iran'].includes(p.nation); }).length;
-    var alliedCount = programs.filter(function(p) { return ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].includes(p.nation); }).length;
+    var programs = Array.isArray(data) ? data : (data && data.programs ? data.programs : []);
+    var advCount = programs.filter(function(p) { return ['PRC','Russia','DPRK','Iran'].indexOf(p.nation) >= 0; }).length;
+    var alliedCount = programs.filter(function(p) { return ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].indexOf(p.nation) >= 0; }).length;
 
     el.innerHTML = '<div class="page-wrap">' +
         '<div class="threat-bar mb-2">' +
@@ -3196,7 +3197,14 @@ Pages.conferences = async function(el) {
         api('/api/conferences'),
     ]);
 
-    var events = Array.isArray(results[0]) ? results[0] : (Array.isArray(results[1]) ? results[1] : []);
+    // API returns {events:[...]} or [{...}] depending on endpoint
+    var raw0 = results[0];
+    var raw1 = results[1];
+    var events = [];
+    if (Array.isArray(raw0)) events = raw0;
+    else if (raw0 && raw0.events) events = raw0.events;
+    else if (Array.isArray(raw1)) events = raw1;
+    else if (raw1 && raw1.events) events = raw1.events;
     var highCount = events.filter(function(e) { return (e.relevance_to_fvey || e.relevance) === 'high'; }).length;
 
     el.innerHTML = '<div class="page-wrap">' +
@@ -3264,7 +3272,8 @@ Pages.conferences = async function(el) {
             api('/api/conferences/upcoming'),
             api('/api/conferences'),
         ]);
-        var freshEvents = Array.isArray(freshResults[0]) ? freshResults[0] : (Array.isArray(freshResults[1]) ? freshResults[1] : []);
+        var fr0 = freshResults[0]; var fr1 = freshResults[1];
+        var freshEvents = Array.isArray(fr0) ? fr0 : (fr0 && fr0.events ? fr0.events : (Array.isArray(fr1) ? fr1 : (fr1 && fr1.events ? fr1.events : [])));
         if (freshEvents.length > 0) {
             events = freshEvents;
             // Re-render with current filter
