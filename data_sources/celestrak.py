@@ -364,7 +364,9 @@ async def fetch_catalog(client: httpx.AsyncClient, group: str = "active") -> lis
     cache_key = f"catalog_{group}"
     now = time.time()
     cached = _cache.get(cache_key)
-    if cached and (now - cached["ts"]) < CACHE_TTL_TLE_CATALOG:
+    # Use shorter TTL (60s) if cached data is from seed catalog, so we retry CelesTrak often
+    ttl = 60 if (cached and cached.get("is_seed")) else CACHE_TTL_TLE_CATALOG
+    if cached and (now - cached["ts"]) < ttl:
         return cached["data"]
 
     data = []
@@ -389,16 +391,14 @@ async def fetch_catalog(client: httpx.AsyncClient, group: str = "active") -> lis
         except Exception:
             pass
 
-    # Last-resort fallback: return cached data or seed catalog
+    # Last-resort fallback: use seed catalog (always use latest seed, not stale cache)
     if not data:
-        cached_data = _cache.get(cache_key, {}).get("data", [])
-        if cached_data:
-            return cached_data
-        # No cache, no live data — use seed catalog
         data = _SEED_CATALOG
         print(f"[CELESTRAK] Using seed catalog ({len(data)} objects)")
+        _cache[cache_key] = {"data": data, "ts": now, "is_seed": True}
+        return data
 
-    _cache[cache_key] = {"data": data, "ts": now}
+    _cache[cache_key] = {"data": data, "ts": now, "is_seed": False}
     return data
 
 
