@@ -8,9 +8,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from contextlib import asynccontextmanager
 import httpx
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+import json as _json
+from datetime import datetime as _dt, timezone as _tz
 
 from config import HOST, PORT
 from data_sources import (
@@ -797,6 +799,51 @@ async def api_industry_trends():
 async def api_industry_overview():
     """Composite industry intelligence overview with live contract/grant data."""
     return JSONResponse(await industry_intel.get_industry_overview(_client))
+
+
+# ---- Email Signup List ----
+
+_SIGNUP_FILE = os.path.join(os.path.dirname(__file__), "data", "email_signups.json")
+
+@app.post("/api/signup")
+async def api_signup(request: Request):
+    """Collect email signups for intel briefing list."""
+    try:
+        body = await request.json()
+        email = (body.get("email") or "").strip().lower()
+        source = body.get("source", "unknown")
+        if not email or "@" not in email:
+            return JSONResponse({"ok": False, "error": "Invalid email"})
+        # Load existing
+        signups = []
+        if os.path.exists(_SIGNUP_FILE):
+            with open(_SIGNUP_FILE) as f:
+                signups = _json.load(f)
+        # Check duplicate
+        existing = [s for s in signups if s.get("email") == email]
+        if existing:
+            return JSONResponse({"ok": True, "message": "Already registered"})
+        # Add new
+        signups.append({
+            "email": email,
+            "source": source,
+            "timestamp": _dt.now(_tz.utc).isoformat(),
+        })
+        os.makedirs(os.path.dirname(_SIGNUP_FILE), exist_ok=True)
+        with open(_SIGNUP_FILE, "w") as f:
+            _json.dump(signups, f, indent=2)
+        return JSONResponse({"ok": True, "message": f"Registered: {email}"})
+    except Exception:
+        return JSONResponse({"ok": False, "error": "Server error"})
+
+@app.get("/api/signups")
+async def api_signups():
+    """View all email signups (admin)."""
+    if os.path.exists(_SIGNUP_FILE):
+        with open(_SIGNUP_FILE) as f:
+            signups = _json.load(f)
+        return JSONResponse({"total": len(signups), "signups": signups})
+    return JSONResponse({"total": 0, "signups": []})
 
 
 # ---- System ----
