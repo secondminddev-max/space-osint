@@ -2854,3 +2854,18 @@ body {
 #env-global-feeds .panel {
     border-top: 1px solid rgba(0,212,255,0.15);
 }
+
+/* ================================================================
+   INDUSTRY INTELLIGENCE PAGE
+   ================================================================ */
+
+/* ---- Industry banner ---- */
+.page-wrap .strategy-banner[style*="cyan"] {
+    border-bottom-color: var(--cyan);
+}
+
+/* ---- Contract value highlighting ---- */
+.data-table td[style*="cyan"] {
+    font-family: var(--font);
+    letter-spacing: 0.5px;
+}

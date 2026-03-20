@@ -108,6 +108,17 @@ function severityDots(level) {
     return html;
 }
 
+function extractArray(data, keys) {
+    // Extract array from API response that might be {key: [...]} or [...]
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object') {
+        for (var i = 0; i < keys.length; i++) {
+            if (Array.isArray(data[keys[i]])) return data[keys[i]];
+        }
+    }
+    return [];
+}
+
 function resilienceColor(score) {
     if (score >= 70) return 'var(--green)';
     if (score >= 40) return 'var(--amber)';
@@ -347,16 +358,16 @@ Pages.cmd = async function (el) {
     ]);
 
     var advStats = results[0];
-    var launches = results[1];
+    var launches = extractArray(results[1], ['launches', 'data', 'results']);
     var weather = results[2];
-    var neo = results[3];
-    var news = results[4];
-    var criticalSystems = results[5];
-    var vulns = results[6];
+    var neo = extractArray(results[3], ['neos', 'data', 'results', 'objects']);
+    var news = extractArray(results[4], ['news', 'articles', 'data', 'results']);
+    var criticalSystems = extractArray(results[5], ['systems', 'data', 'results', 'weapons']);
+    var vulns = extractArray(results[6], ['vulnerabilities', 'data', 'results']);
     var stats = results[7];
     var sitrep = results[8];
     var hotspots = results[9];
-    var social = results[10];
+    var social = extractArray(results[10], ['posts', 'data', 'results', 'social']);
     var proximity = results[11];
 
     // --- Threat bar ---
@@ -372,7 +383,7 @@ Pages.cmd = async function (el) {
     if (stats) {
         document.getElementById('ov-total').textContent = (stats.total_tracked || 0).toLocaleString();
     }
-    if (criticalSystems) {
+    if (criticalSystems.length) {
         document.getElementById('ov-asat-ct').textContent = criticalSystems.length;
     }
 
@@ -610,7 +621,7 @@ Pages.cmd = async function (el) {
             setTimeout(function() { updateKpChart(weather.kp_history); }, 300);
         }
     }
-    if (neo) document.getElementById('ov-neo').textContent = neo.length;
+    if (neo.length) document.getElementById('ov-neo').textContent = neo.length;
 
     // --- Enhanced env bar fields (X-ray, Aurora, Proton) ---
     function updateCmdEnvEnhanced(envData) {
@@ -793,11 +804,12 @@ Pages.cmd = async function (el) {
     function renderCmdDeductions(data) {
         var dedEl = document.getElementById('ov-deductions');
         if (!dedEl) return;
-        if (!data || !Array.isArray(data) || !data.length) {
+        var dedArr = extractArray(data, ['deductions', 'data', 'items', 'results']);
+        if (!dedArr.length) {
             dedEl.innerHTML = '<div class="empty-state">NO DEDUCTIONS AVAILABLE</div>';
             return;
         }
-        var items = data.slice(0, 3);
+        var items = dedArr.slice(0, 3);
         var dHtml = '';
         items.forEach(function(d, idx) {
             var conf = d.confidence || d.priority || 'medium';
@@ -826,8 +838,9 @@ Pages.cmd = async function (el) {
 
     // --- AUTO-REFRESH: Launches every 120s ---
     registerInterval(async function() {
-        var freshLaunches = await api('/api/launches');
-        if (freshLaunches) {
+        var rawFreshLaunches = await api('/api/launches');
+        var freshLaunches = extractArray(rawFreshLaunches, ['launches', 'data', 'results']);
+        if (freshLaunches.length) {
             advLaunches = freshLaunches.filter(function(l) { return isAdvLaunch(l); });
         }
     }, 120000);
@@ -1406,8 +1419,9 @@ Pages.orbital = async function (el) {
    ================================================================ */
 Pages.launches = async function (el) {
     el.innerHTML = '<div class="loading">LOADING LAUNCH INTELLIGENCE</div>';
-    var data = await api('/api/launches');
-    if (!data) { el.innerHTML = '<div class="empty-state">LAUNCH DATA UNAVAILABLE</div>'; return; }
+    var rawLaunchData = await api('/api/launches');
+    var data = extractArray(rawLaunchData, ['launches', 'data', 'results']);
+    if (!data.length) { el.innerHTML = '<div class="empty-state">LAUNCH DATA UNAVAILABLE</div>'; return; }
 
     data.forEach(function(l) { l._isAdv = isAdvLaunch(l); });
     var advLaunches = data.filter(function(l) { return l._isAdv; });
@@ -1483,8 +1497,9 @@ Pages.launches = async function (el) {
 
     // --- AUTO-REFRESH: Launch data every 120s ---
     registerInterval(async function() {
-        var freshData = await api('/api/launches');
-        if (!freshData) return;
+        var rawFreshData = await api('/api/launches');
+        var freshData = extractArray(rawFreshData, ['launches', 'data', 'results']);
+        if (!freshData.length) return;
         freshData.forEach(function(l) { l._isAdv = isAdvLaunch(l); });
         advLaunches = freshData.filter(function(l) { return l._isAdv; });
         fveyLaunches = freshData.filter(function(l) { return !l._isAdv; });
@@ -1533,11 +1548,13 @@ Pages.ground = async function (el) {
         api('/api/ground-stations?scope=fvey'),
     ]);
 
-    var stations = results[0] || [];
+    var stations = extractArray(results[0], ['stations', 'ground_stations', 'data', 'results']);
     if (!stations.length) { el.innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
 
-    var adversary = results[1] || stations.filter(function(s) { return ['PRC', 'CIS', 'NKOR', 'IRAN'].includes(s.country); });
-    var fvey = results[2] || stations.filter(function(s) { return ['US', 'UK', 'CA', 'AU', 'NZ'].includes(s.country); });
+    var adversary = extractArray(results[1], ['stations', 'ground_stations', 'data', 'results']);
+    if (!adversary.length) adversary = stations.filter(function(s) { return ['PRC', 'CIS', 'NKOR', 'IRAN'].includes(s.country); });
+    var fvey = extractArray(results[2], ['stations', 'ground_stations', 'data', 'results']);
+    if (!fvey.length) fvey = stations.filter(function(s) { return ['US', 'UK', 'CA', 'AU', 'NZ'].includes(s.country); });
 
     var launchSites = stations.filter(function(s) { return (s.type || '').toLowerCase().includes('launch'); });
     var ttcSites = stations.filter(function(s) { var t = (s.type || '').toLowerCase(); return t.includes('tt&c') || t.includes('tracking') || t.includes('telemetry'); });
@@ -1702,8 +1719,10 @@ Pages.ground = async function (el) {
    ================================================================ */
 Pages.missile = async function (el) {
     el.innerHTML = '<div class="loading">LOADING COUNTERSPACE INTELLIGENCE</div>';
-    var allSystems = await api('/api/missile-asat');
-    if (!allSystems) { el.innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
+    var rawSystems = await api('/api/missile-asat');
+    var allSystems = extractArray(rawSystems, ['systems', 'data', 'results', 'weapons']);
+    if (!allSystems.length && rawSystems) allSystems = Array.isArray(rawSystems) ? rawSystems : [];
+    if (!allSystems.length) { el.innerHTML = '<div class="empty-state">DATA UNAVAILABLE</div>'; return; }
 
     var critical = allSystems.filter(function(s) { return s.threat_level === 'critical'; });
     var high = allSystems.filter(function(s) { return s.threat_level === 'high'; });
@@ -1875,8 +1894,8 @@ Pages.fvey = async function (el) {
         api('/api/threat/overview'),
     ]);
 
-    var vulns = results[0] || [];
-    var recs = results[1] || [];
+    var vulns = extractArray(results[0], ['vulnerabilities', 'data', 'results']);
+    var recs = extractArray(results[1], ['recommendations', 'data', 'results']);
     var threatOv = results[2] || {};
 
     var criticalVulns = vulns.filter(function(v) { return v.severity === 'critical'; });
@@ -2111,13 +2130,13 @@ Pages.strategy = async function (el) {
     ]);
 
     var ov = results[0] || {};
-    var scenarios = results[1] || [];
-    var vulns = results[2] || [];
-    var recs = results[3] || [];
+    var scenarios = extractArray(results[1], ['scenarios', 'data', 'results']);
+    var vulns = extractArray(results[2], ['vulnerabilities', 'data', 'results']);
+    var recs = extractArray(results[3], ['recommendations', 'data', 'results']);
     var hotspots = results[4];
-    var research = results[5] || [];
+    var research = extractArray(results[5], ['research', 'articles', 'data', 'results']);
     var brief = results[6];
-    var arxiv = results[7] || [];
+    var arxiv = extractArray(results[7], ['papers', 'articles', 'data', 'results']);
 
     var level = (ov.overall_threat_level || ov.threat_level || 'HIGH').toUpperCase();
     var critVulns = vulns.filter(function(v) { return v.severity === 'critical'; }).length;
@@ -2323,12 +2342,13 @@ Pages.strategy = async function (el) {
     function renderStrategyDeductions(data) {
         var dedBody = document.getElementById('strategy-deductions-body');
         if (!dedBody) return;
-        if (!data || !Array.isArray(data) || !data.length) {
+        var dedArr = extractArray(data, ['deductions', 'data', 'items', 'results']);
+        if (!dedArr.length) {
             dedBody.innerHTML = '<div class="empty-state">DEDUCTIONS DATA UNAVAILABLE</div>';
             return;
         }
         var dHtml = '<div class="asat-grid">';
-        data.forEach(function(d, idx) {
+        dedArr.forEach(function(d, idx) {
             var cat = (d.category || 'general').toLowerCase();
             var confLevel = (d.confidence || d.priority || 'medium').toLowerCase();
             var badgeCls = confLevel === 'critical' || confLevel === 'high' ? 'critical' : confLevel === 'medium' ? 'high' : 'medium';
@@ -2436,8 +2456,8 @@ Pages.strategy = async function (el) {
             api('/api/intel/arxiv'),
         ]);
 
-        var freshResearch = freshFeeds[0] || [];
-        var freshArxiv = freshFeeds[1] || [];
+        var freshResearch = extractArray(freshFeeds[0], ['research', 'articles', 'data', 'results']);
+        var freshArxiv = extractArray(freshFeeds[1], ['papers', 'articles', 'data', 'results']);
 
         // Update research feed
         var resBodyEl = document.getElementById('strategy-research-body');
@@ -2497,7 +2517,8 @@ Pages.overmatch = async function (el) {
         // Endpoints may not exist yet
     }
 
-    var zones = (overmatch && overmatch.zones) ? overmatch.zones : null;
+    var zonesArr = extractArray(overmatch, ['zones', 'data', 'results']);
+    var zones = zonesArr.length > 0 ? zonesArr : null;
     var hs = (hotspots && hotspots.hotspots) || [];
     var domains = ['ISR', 'COMMS', 'PNT', 'SDA', 'ASAT', 'EW'];
     var mapH = Math.max(380, window.innerHeight * 0.4);
@@ -2675,8 +2696,8 @@ Pages.overmatch = async function (el) {
             return;
         }
 
-        if (!freshOM || !freshOM.zones) return;
-        var freshZones = freshOM.zones;
+        var freshZones = extractArray(freshOM, ['zones', 'data', 'results']);
+        if (!freshZones.length) return;
 
         // Update global score in banner
         var freshGlobalScore = (freshSummary && freshSummary.global_overmatch) || (freshSummary && freshSummary.overall_score) || Math.round(freshZones.reduce(function(a, z) { return a + (z.overmatch_score || 0); }, 0) / freshZones.length);
@@ -2754,12 +2775,12 @@ Pages.wargame = async function (el) {
         // Endpoints may not exist yet
     }
 
-    var scenarioList = scenarios || [];
+    var scenarioList = extractArray(scenarios, ['scenarios', 'data', 'items', 'results']);
     var hasScenarios = scenarioList.length > 0;
 
     if (!hasScenarios) {
         var threatScenarios = await api('/api/threat/scenarios');
-        var ts = threatScenarios || [];
+        var ts = extractArray(threatScenarios, ['scenarios', 'data', 'results']);
         var tsHtml = '';
         ts.forEach(function(s, idx) {
             var phaseHtml = '';
@@ -2930,7 +2951,7 @@ Pages.incidents = async function (el) {
 
     var rawInc = results[0] || {};
     var incStats = results[1] || {};
-    var all = Array.isArray(rawInc) ? rawInc : (rawInc.incidents || []);
+    var all = extractArray(rawInc, ['incidents', 'data', 'events', 'results']);
     if (!all.length) { el.innerHTML = '<div class="empty-state">INCIDENT DATA UNAVAILABLE</div>'; return; }
 
     var byType = incStats.by_type || {};
@@ -3124,7 +3145,7 @@ Pages.futures = async function(el) {
     var summary = results[1];
     if (!data) { el.innerHTML = '<div class="empty-state">FUTURES DATA UNAVAILABLE</div>'; return; }
 
-    var programs = Array.isArray(data) ? data : (data && data.programs ? data.programs : []);
+    var programs = extractArray(data, ['programs', 'data', 'futures', 'results']);
     var advCount = programs.filter(function(p) { return ['PRC','Russia','DPRK','Iran'].indexOf(p.nation) >= 0; }).length;
     var alliedCount = programs.filter(function(p) { return ['US','UK','Australia','Canada','NZ','Japan','South Korea','NATO'].indexOf(p.nation) >= 0; }).length;
 
@@ -3200,11 +3221,8 @@ Pages.conferences = async function(el) {
     // API returns {events:[...]} or [{...}] depending on endpoint
     var raw0 = results[0];
     var raw1 = results[1];
-    var events = [];
-    if (Array.isArray(raw0)) events = raw0;
-    else if (raw0 && raw0.events) events = raw0.events;
-    else if (Array.isArray(raw1)) events = raw1;
-    else if (raw1 && raw1.events) events = raw1.events;
+    var events = extractArray(raw0, ['events', 'conferences', 'data', 'results']);
+    if (!events.length) events = extractArray(raw1, ['events', 'conferences', 'data', 'results']);
     var highCount = events.filter(function(e) { return (e.relevance_to_fvey || e.relevance) === 'high'; }).length;
 
     el.innerHTML = '<div class="page-wrap">' +
@@ -3273,7 +3291,8 @@ Pages.conferences = async function(el) {
             api('/api/conferences'),
         ]);
         var fr0 = freshResults[0]; var fr1 = freshResults[1];
-        var freshEvents = Array.isArray(fr0) ? fr0 : (fr0 && fr0.events ? fr0.events : (Array.isArray(fr1) ? fr1 : (fr1 && fr1.events ? fr1.events : [])));
+        var freshEvents = extractArray(fr0, ['events', 'conferences', 'data', 'results']);
+        if (!freshEvents.length) freshEvents = extractArray(fr1, ['events', 'conferences', 'data', 'results']);
         if (freshEvents.length > 0) {
             events = freshEvents;
             // Re-render with current filter
@@ -4182,4 +4201,216 @@ Pages.environment = async function (el) {
         var envTsEl = document.getElementById('env-live-ts');
         if (envTsEl) envTsEl.textContent = zuluFull();
     }, 60000);
+};
+
+
+/* ================================================================
+   PAGE 16: INDUSTRY INTELLIGENCE
+   Contractors, contracts, supply chain, grants
+   ================================================================ */
+Pages.industry = async function(el) {
+    el.innerHTML = '<div class="loading">LOADING INDUSTRY INTELLIGENCE</div>';
+
+    var results = await Promise.all([
+        api('/api/industry/overview'),
+        api('/api/industry/contractors'),
+        api('/api/industry/contracts'),
+        api('/api/industry/supply-chain'),
+        api('/api/industry/grants'),
+    ]);
+
+    var overview = results[0] || {};
+    var contractors = extractArray(results[1], ['contractors', 'companies', 'data', 'results', 'firms']);
+    var contracts = extractArray(results[2], ['contracts', 'awards', 'data', 'results']);
+    var supplyChain = results[3];
+    var grants = extractArray(results[4], ['grants', 'awards', 'data', 'results', 'funding']);
+
+    var supplyVulns = extractArray(supplyChain, ['vulnerabilities', 'risks', 'data', 'results', 'items']);
+    var supplyNodes = extractArray(supplyChain, ['nodes', 'suppliers', 'entities', 'chain']);
+    var supplyAssessment = '';
+    if (supplyChain && typeof supplyChain === 'object' && !Array.isArray(supplyChain)) {
+        supplyAssessment = supplyChain.assessment || supplyChain.summary || '';
+    }
+
+    // Overview text
+    var ovSummary = '';
+    if (typeof overview === 'string') {
+        ovSummary = overview;
+    } else {
+        ovSummary = overview.summary || overview.assessment || overview.overview || '';
+    }
+    var ovTotalContractors = overview.total_contractors || contractors.length || 0;
+    var ovTotalContracts = overview.total_contracts || contracts.length || 0;
+    var ovTotalGrants = overview.total_grants || grants.length || 0;
+    var ovTotalValue = overview.total_value || overview.total_contract_value || '';
+    var ovCriticalRisks = overview.critical_risks || 0;
+
+    // Sort contracts by value descending if available
+    contracts.sort(function(a, b) {
+        var va = parseFloat(a.value || a.amount || 0);
+        var vb = parseFloat(b.value || b.amount || 0);
+        return vb - va;
+    });
+
+    // Build contractor cards
+    var contractorHtml = '';
+    if (contractors.length) {
+        contractors.forEach(function(c) {
+            var name = c.name || c.company || c.contractor || '?';
+            var sector = c.sector || c.domain || c.category || '';
+            var revenue = c.revenue || c.annual_revenue || '';
+            var contracts_ct = c.contract_count || c.contracts || '';
+            var country = c.country || c.hq || c.headquarters || '';
+            var isAdv = ['PRC', 'China', 'Russia', 'CIS', 'DPRK', 'Iran'].some(function(x) { return (country || '').indexOf(x) >= 0; });
+            var borderCol = isAdv ? 'var(--red)' : 'var(--cyan)';
+            contractorHtml += '<div class="threat-card severity-' + (isAdv ? 'high' : 'low') + '" style="border-left-color:' + borderCol + '">' +
+                '<div class="tc-header">' +
+                    (country ? '<span class="badge" style="background:rgba(255,255,255,0.05);color:' + borderCol + ';border:1px solid ' + borderCol + '">' + country.toUpperCase().substring(0, 5) + '</span> ' : '') +
+                    '<span class="tc-title">' + name + '</span>' +
+                '</div>' +
+                '<div class="tc-body">' + (c.description || c.capabilities || c.specialization || '') + '</div>' +
+                '<div class="tc-meta">' +
+                    (sector ? 'SECTOR: <span style="color:var(--amber)">' + sector.toUpperCase() + '</span> // ' : '') +
+                    (revenue ? 'REVENUE: <span style="color:var(--cyan)">' + revenue + '</span> // ' : '') +
+                    (contracts_ct ? 'CONTRACTS: ' + contracts_ct : '') +
+                '</div>' +
+                (c.key_programs ? '<div class="tc-source">PROGRAMS: ' + (Array.isArray(c.key_programs) ? c.key_programs.join(', ') : c.key_programs) + '</div>' : '') +
+            '</div>';
+        });
+    } else {
+        contractorHtml = '<div class="empty-state">CONTRACTOR DATA PENDING</div>';
+    }
+
+    // Build contracts table
+    var contractTableHtml = '';
+    if (contracts.length) {
+        contracts.slice(0, 50).forEach(function(c) {
+            var val = c.value || c.amount || c.total_value || '?';
+            var severity = 'medium';
+            var numVal = parseFloat(val);
+            if (numVal >= 1000000000) severity = 'critical';
+            else if (numVal >= 100000000) severity = 'high';
+            contractTableHtml += '<tr>' +
+                '<td style="color:var(--white)">' + (c.title || c.name || c.program || '?') + '</td>' +
+                '<td>' + (c.contractor || c.company || c.awardee || '?') + '</td>' +
+                '<td style="color:var(--cyan)">' + (typeof val === 'number' ? '$' + val.toLocaleString() : val) + '</td>' +
+                '<td>' + badge(severity) + '</td>' +
+                '<td>' + (c.agency || c.customer || c.branch || '?') + '</td>' +
+                '<td style="color:var(--text-dim)">' + (c.date || c.award_date || c.year || '?') + '</td>' +
+                '</tr>';
+        });
+    }
+
+    // Build supply chain vulnerability cards
+    var supplyHtml = '';
+    if (supplyVulns.length) {
+        supplyVulns.forEach(function(v) {
+            var sev = (v.severity || v.risk_level || v.priority || 'medium').toLowerCase();
+            supplyHtml += '<div class="threat-card severity-' + sev + '">' +
+                '<div class="tc-header">' +
+                    severityDots(sev) + ' ' +
+                    badge(sev) + ' ' +
+                    '<span class="tc-title">' + (v.title || v.name || v.component || '?') + '</span>' +
+                '</div>' +
+                '<div class="tc-body">' + (v.description || v.detail || v.impact || '') + '</div>' +
+                '<div class="tc-meta">' +
+                    (v.affected_systems ? 'AFFECTED: ' + (Array.isArray(v.affected_systems) ? v.affected_systems.join(', ') : v.affected_systems) + ' // ' : '') +
+                    (v.mitigation ? 'MITIGATION: <span style="color:var(--green)">' + v.mitigation + '</span>' : '') +
+                '</div>' +
+            '</div>';
+        });
+    } else if (supplyNodes.length) {
+        supplyNodes.forEach(function(n) {
+            supplyHtml += '<div class="threat-card severity-medium">' +
+                '<div class="tc-header"><span class="tc-title">' + (n.name || n.supplier || n.node || '?') + '</span></div>' +
+                '<div class="tc-body">' + (n.description || n.role || n.product || '') + '</div>' +
+                '<div class="tc-meta">' +
+                    (n.country ? 'ORIGIN: ' + n.country + ' // ' : '') +
+                    (n.risk ? 'RISK: <span style="color:var(--red)">' + n.risk + '</span>' : '') +
+                '</div>' +
+            '</div>';
+        });
+    } else if (supplyAssessment) {
+        supplyHtml = '<div class="intel-summary" style="white-space:pre-line;line-height:1.7">' + supplyAssessment + '</div>';
+    } else {
+        supplyHtml = '<div class="empty-state">SUPPLY CHAIN DATA PENDING</div>';
+    }
+
+    // Build grants cards
+    var grantsHtml = '';
+    if (grants.length) {
+        grants.forEach(function(g) {
+            var gVal = g.value || g.amount || g.funding || '';
+            grantsHtml += '<div class="threat-card severity-low" style="border-left-color:var(--green)">' +
+                '<div class="tc-header">' +
+                    '<span class="tc-title">' + (g.title || g.name || g.program || '?') + '</span>' +
+                    (gVal ? '<span style="margin-left:auto;font-size:10px;color:var(--cyan)">' + (typeof gVal === 'number' ? '$' + gVal.toLocaleString() : gVal) + '</span>' : '') +
+                '</div>' +
+                '<div class="tc-body">' + (g.description || g.objective || g.purpose || '') + '</div>' +
+                '<div class="tc-meta">' +
+                    (g.agency ? 'AGENCY: ' + g.agency + ' // ' : '') +
+                    (g.recipient ? 'RECIPIENT: ' + g.recipient + ' // ' : '') +
+                    (g.date || g.year ? 'DATE: ' + (g.date || g.year) : '') +
+                '</div>' +
+            '</div>';
+        });
+    } else {
+        grantsHtml = '<div class="empty-state">GRANTS DATA PENDING</div>';
+    }
+
+    el.innerHTML = '<div class="page-wrap">' +
+        '<div class="strategy-banner" style="border-bottom-color:var(--cyan)">' +
+            '<div class="strategy-title">SPACE INDUSTRY INTELLIGENCE</div>' +
+            '<div class="strategy-subtitle">UNCLASSIFIED // CONTRACTOR MONITORING // SUPPLY CHAIN RISK // ' + zulu() + '</div>' +
+        '</div>' +
+        '<div class="threat-bar mb-2">' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9733;</div><div><div class="tb-val">' + ovTotalContractors + '</div><div class="tb-lbl">CONTRACTORS</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9678;</div><div><div class="tb-val">' + ovTotalContracts + '</div><div class="tb-lbl">CONTRACTS</div></div></div>' +
+            '<div class="tb-cell info"><div class="tb-icon">&#9656;</div><div><div class="tb-val">' + ovTotalGrants + '</div><div class="tb-lbl">GRANTS</div></div></div>' +
+            (ovTotalValue ? '<div class="tb-cell alert"><div class="tb-icon">&#9670;</div><div><div class="tb-val" style="font-size:14px">' + ovTotalValue + '</div><div class="tb-lbl">TOTAL VALUE</div></div></div>' : '') +
+            (ovCriticalRisks ? '<div class="tb-cell hostile"><div class="tb-icon">&#9888;</div><div><div class="tb-val">' + ovCriticalRisks + '</div><div class="tb-lbl">CRITICAL RISKS</div></div></div>' : '') +
+            '<div class="tb-cell"><div><div class="tb-val"><span class="live-indicator"><span class="live-dot"></span> LIVE</span></div><div class="tb-lbl">300S REFRESH <span id="industry-live-ts" class="last-updated-ts">' + zulu() + '</span></div></div></div>' +
+        '</div>' +
+        (ovSummary ? '<div class="panel mb-4"><div class="panel-head"><h3>INDUSTRY OVERVIEW</h3><span class="ph-meta">' + liveIndicator('') + '</span></div>' +
+            '<div class="panel-body"><div class="intel-summary">' + ovSummary + '</div></div></div>' : '') +
+        '<div class="grid-2 mb-4">' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>PRIME CONTRACTORS</h3><span class="ph-meta"><span class="badge badge-fvey">' + contractors.length + ' TRACKED</span></span></div>' +
+                '<div class="panel-body" style="max-height:500px">' + contractorHtml + '</div>' +
+            '</div>' +
+            '<div class="panel">' +
+                '<div class="panel-head"><h3>SUPPLY CHAIN RISK ASSESSMENT</h3><span class="ph-meta"><span class="badge badge-critical">' + supplyVulns.length + ' VULNERABILITIES</span></span></div>' +
+                '<div class="panel-body" style="max-height:500px">' + supplyHtml + '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="panel mb-4">' +
+            '<div class="panel-head"><h3>CONTRACT AWARDS</h3><span class="ph-meta"><span class="badge badge-high">' + contracts.length + ' TRACKED</span></span></div>' +
+            '<div class="panel-body" style="max-height:400px">' +
+                (contracts.length ? '<table class="data-table"><thead><tr><th>CONTRACT</th><th>CONTRACTOR</th><th>VALUE</th><th>TIER</th><th>AGENCY</th><th>DATE</th></tr></thead><tbody>' + contractTableHtml + '</tbody></table>'
+                    : '<div class="empty-state">CONTRACT DATA PENDING</div>') +
+            '</div>' +
+        '</div>' +
+        '<div class="panel mb-4">' +
+            '<div class="panel-head"><h3>RESEARCH GRANTS & FUNDING</h3><span class="ph-meta">' + grants.length + ' GRANTS ' + liveIndicator('') + '</span></div>' +
+            '<div class="panel-body" style="max-height:400px"><div class="futures-grid">' + grantsHtml + '</div></div>' +
+        '</div>' +
+        '<div style="text-align:center;padding:4px;font-size:7px;letter-spacing:1.5px;color:var(--text-muted)"><span class="live-indicator"><span class="live-dot"></span> LIVE</span> INDUSTRY INTEL AUTO-REFRESH 300S | LAST: <span id="industry-live-ts2">' + zulu() + '</span></div>' +
+        '</div>';
+
+    // Auto-refresh every 300s
+    registerInterval(async function() {
+        var freshResults = await Promise.all([
+            api('/api/industry/overview'),
+            api('/api/industry/contractors'),
+            api('/api/industry/contracts'),
+        ]);
+        var freshContractors = extractArray(freshResults[1], ['contractors', 'companies', 'data', 'results', 'firms']);
+        var freshContracts = extractArray(freshResults[2], ['contracts', 'awards', 'data', 'results']);
+        if (freshContractors.length) contractors = freshContractors;
+        if (freshContracts.length) contracts = freshContracts;
+        var indTsEl = document.getElementById('industry-live-ts');
+        if (indTsEl) indTsEl.textContent = zulu();
+        var indTs2El = document.getElementById('industry-live-ts2');
+        if (indTs2El) indTs2El.textContent = zulu();
+    }, 300000);
 };

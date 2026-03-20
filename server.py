@@ -28,6 +28,7 @@ from data_sources import (
     global_feeds,
     sigint_feeds,
     cutting_edge,
+    industry_intel,
 )
 
 _client: httpx.AsyncClient = None
@@ -741,6 +742,39 @@ async def api_mission_assurance():
     return JSONResponse(cutting_edge.get_mission_assurance())
 
 
+# ---- Space Industry Intelligence ----
+
+@app.get("/api/industry/contractors")
+async def api_industry_contractors():
+    """Defense space contractors database — US primes, allied, and adversary industry."""
+    return JSONResponse(industry_intel.get_defense_contractors())
+
+@app.get("/api/industry/contracts")
+async def api_industry_contracts():
+    """Major defense space contracts — programs, values, status."""
+    return JSONResponse(industry_intel.get_major_contracts())
+
+@app.get("/api/industry/supply-chain")
+async def api_industry_supply_chain():
+    """Supply chain vulnerability analysis — critical dependencies and adversary exposure."""
+    return JSONResponse(industry_intel.get_supply_chain_vulns())
+
+@app.get("/api/industry/grants")
+async def api_industry_grants():
+    """R&D grants and funding tracker — government space defense research programs."""
+    return JSONResponse(industry_intel.get_grants_funding())
+
+@app.get("/api/industry/trends")
+async def api_industry_trends():
+    """Space industry market trends — launch costs, smallsats, ISAM, cislunar economy."""
+    return JSONResponse(industry_intel.get_industry_trends())
+
+@app.get("/api/industry/overview")
+async def api_industry_overview():
+    """Composite industry intelligence overview with live contract/grant data."""
+    return JSONResponse(await industry_intel.get_industry_overview(_client))
+
+
 # ---- System ----
 
 @app.get("/api/status")
@@ -751,8 +785,8 @@ async def api_status():
         "version": "12.0.0",
         "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
         "operator": "Echelon Vantage Pty Ltd — Australia",
-        "api_endpoints": 109,
-        "modules": 31,
+        "api_endpoints": 115,
+        "modules": 32,
         "tabs": 15,
     })
 
@@ -767,7 +801,7 @@ async def api_capabilities():
         "fvey_partners": ["Australia", "United States", "United Kingdom", "Canada", "New Zealand"],
         "itar_status": "ITAR-free — all intelligence derived from open sources",
         "statistics": {
-            "api_endpoints": 109, "backend_modules": 31, "dashboard_tabs": 15,
+            "api_endpoints": 115, "backend_modules": 32, "dashboard_tabs": 15,
             "lines_of_code": 32262, "adversary_sats": "800+", "asat_systems": 33,
             "ground_stations": 63, "wargame_scenarios": 7, "future_programs": 45,
             "incidents": 17, "conferences": 25, "contested_zones": 6, "live_feeds": "20+",
