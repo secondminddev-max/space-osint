@@ -2545,8 +2545,9 @@ Pages.overmatch = async function (el) {
         var domainBarsHtml = '';
         var domainMiniHtml = '';
         domains.forEach(function(d) {
-            domainBarsHtml += buildOvermatchBar(d, dm[d] || 0);
-            var dScore = dm[d] || 0;
+            var raw = dm[d];
+            var dScore = (typeof raw === 'object' && raw !== null) ? (raw.score || 0) : (raw || 0);
+            domainBarsHtml += buildOvermatchBar(d, dScore);
             domainMiniHtml += '<div class="domain-score-card">' +
                 '<div class="domain-score-label">' + d + '</div>' +
                 '<div class="domain-score-val" style="color:' + overmatchColor(dScore) + '">' + (dScore > 0 ? '+' : '') + dScore + '</div>' +
