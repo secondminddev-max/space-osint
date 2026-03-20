@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echelon Vantage — Pricing & Access Tiers</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --amber: #FFB000;
+            --amber-dim: #CC8D00;
+            --amber-glow: rgba(255, 176, 0, 0.15);
+            --bg: #000000;
+            --surface: #0A0A0A;
+            --border: #1A1A1A;
+            --border-bright: #2A2A0A;
+            --text: #D0D0D0;
+            --text-dim: #808080;
+            --white: #FFFFFF;
+            --red: #FF3333;
+            --green: #00FF66;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Scanline overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255,176,0,0.012) 2px,
+                rgba(255,176,0,0.012) 4px
+            );
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Classification Banners */
+        .class-banner {
+            background: var(--green);
+            color: #000;
+            text-align: center;
+            font-size: 11px;
+            padding: 3px 0;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+        .class-banner-top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10000;
+        }
+        .class-banner-bottom {
+            position: relative;
+            z-index: 10000;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 22px;
+            left: 0;
+            right: 0;
+            z-index: 9998;
+            background: rgba(0, 0, 0, 0.94);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 12px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .nav-brand .flag { font-size: 20px; }
+        .nav-brand .brand-name {
+            color: var(--amber);
+            font-size: 14px;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+        .nav-brand .brand-sub {
+            color: var(--text-dim);
+            font-size: 9px;
+            letter-spacing: 2px;
+            display: block;
+            margin-top: 1px;
+        }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 10px;
+            letter-spacing: 2px;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--amber); }
+        .nav-links a.active-link { color: var(--amber); }
+        .nav-cta {
+            background: var(--amber) !important;
+            color: #000 !important;
+            padding: 6px 16px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-cta:hover { background: var(--white) !important; }
+
+        /* Hero */
+        .pricing-hero {
+            padding: 140px 32px 60px;
+            text-align: center;
+            position: relative;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(255,176,0,0.05) 0%, transparent 60%),
+                var(--bg);
+        }
+        .pricing-hero .section-label {
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 4px;
+            margin-bottom: 12px;
+        }
+        .pricing-hero h1 {
+            color: var(--white);
+            font-size: clamp(24px, 4vw, 42px);
+            letter-spacing: 4px;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            font-weight: normal;
+        }
+        .pricing-hero h1 .amber { color: var(--amber); }
+        .pricing-hero .hero-sub {
+            color: var(--text-dim);
+            font-size: 12px;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.9;
+            letter-spacing: 1px;
+        }
+
+        /* Pricing Cards */
+        .pricing-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 32px 80px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+        }
+        .pricing-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 40px 32px;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+        .pricing-card:hover { border-color: var(--amber); }
+        .pricing-card.featured {
+            border-color: var(--amber);
+            background: linear-gradient(180deg, rgba(255,176,0,0.04) 0%, var(--surface) 50%);
+        }
+        .pricing-card.featured::before {
+            content: 'MOST POPULAR';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--amber);
+            color: #000;
+            text-align: center;
+            font-size: 9px;
+            letter-spacing: 3px;
+            padding: 4px 0;
+            font-weight: bold;
+        }
+        .tier-icon {
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+        }
+        .tier-name {
+            color: var(--white);
+            font-size: 18px;
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+            font-weight: normal;
+        }
+        .tier-price {
+            color: var(--amber);
+            font-size: 32px;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .tier-price .currency { font-size: 18px; vertical-align: top; margin-right: 2px; }
+        .tier-price .period {
+            font-size: 12px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+        .tier-desc {
+            color: var(--text-dim);
+            font-size: 11px;
+            line-height: 1.7;
+            margin: 16px 0 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tier-features {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 32px;
+            flex: 1;
+        }
+        .tier-features li {
+            color: var(--text);
+            font-size: 11px;
+            line-height: 1.8;
+            padding: 6px 0 6px 20px;
+            position: relative;
+        }
+        .tier-features li::before {
+            content: '\25B8';
+            color: var(--amber);
+            position: absolute;
+            left: 0;
+            font-size: 10px;
+        }
+        .tier-btn {
+            display: block;
+            width: 100%;
+            padding: 14px 0;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 3px;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tier-btn-primary {
+            background: var(--amber);
+            color: #000;
+        }
+        .tier-btn-primary:hover { background: var(--white); }
+        .tier-btn-outline {
+            background: transparent;
+            color: var(--amber);
+            border: 1px solid var(--amber);
+        }
+        .tier-btn-outline:hover { background: var(--amber); color: #000; }
+        .tier-btn-contact {
+            background: transparent;
+            color: var(--white);
+            border: 1px solid var(--text-dim);
+        }
+        .tier-btn-contact:hover { border-color: var(--amber); color: var(--amber); }
+        .tier-fallback {
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+            color: var(--text-dim);
+            font-size: 9px;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .tier-fallback:hover { color: var(--amber); }
+
+        /* Comparison Strip */
+        .comparison-strip {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 24px 32px;
+        }
+        .comparison-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .comparison-item {
+            text-align: center;
+            flex: 1;
+            min-width: 140px;
+        }
+        .comparison-item .comp-val {
+            color: var(--amber);
+            font-size: 20px;
+            display: block;
+            letter-spacing: 1px;
+        }
+        .comparison-item .comp-lbl {
+            color: var(--text-dim);
+            font-size: 9px;
+            letter-spacing: 2px;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* Section base */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 0;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 32px;
+        }
+        .faq-header {
+            margin-bottom: 48px;
+        }
+        .faq-header .section-label {
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 4px;
+            margin-bottom: 12px;
+        }
+        .faq-header h2 {
+            color: var(--white);
+            font-size: clamp(18px, 3vw, 26px);
+            letter-spacing: 3px;
+            font-weight: normal;
+        }
+        .faq-item {
+            border-bottom: 1px solid var(--border);
+            padding: 24px 0;
+        }
+        .faq-item:first-of-type {
+            border-top: 1px solid var(--border);
+        }
+        .faq-q {
+            color: var(--white);
+            font-size: 12px;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .faq-q::before {
+            content: 'Q';
+            color: var(--amber);
+            font-size: 10px;
+            letter-spacing: 2px;
+            flex-shrink: 0;
+            border: 1px solid var(--amber);
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 1px;
+        }
+        .faq-a {
+            color: var(--text-dim);
+            font-size: 11px;
+            line-height: 1.9;
+            padding-left: 34px;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            text-align: center;
+            padding: 80px 32px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .cta-section h2 {
+            color: var(--white);
+            font-size: clamp(18px, 3vw, 26px);
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            font-weight: normal;
+        }
+        .cta-section p {
+            color: var(--text-dim);
+            font-size: 12px;
+            line-height: 1.8;
+            margin-bottom: 32px;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .cta-primary {
+            display: inline-block;
+            background: var(--amber);
+            color: #000;
+            padding: 14px 40px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-decoration: none;
+            font-weight: bold;
+            border: none;
+            transition: background 0.2s;
+        }
+        .cta-primary:hover { background: var(--white); }
+        .cta-secondary {
+            display: inline-block;
+            background: transparent;
+            color: var(--amber);
+            padding: 14px 40px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid var(--amber);
+            transition: all 0.2s;
+        }
+        .cta-secondary:hover { background: var(--amber); color: #000; }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--border);
+            padding: 32px;
+            text-align: center;
+        }
+        .footer p {
+            color: var(--text-dim);
+            font-size: 10px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 960px) {
+            .pricing-grid { grid-template-columns: 1fr; max-width: 480px; }
+        }
+        @media (max-width: 768px) {
+            .nav-links a:not(.nav-cta) { display: none; }
+            .pricing-hero { padding: 130px 20px 40px; }
+            .pricing-grid { padding: 0 20px 60px; }
+            .comparison-inner { justify-content: center; }
+            .comparison-item { min-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Classification Banner — Top -->
+<div class="class-banner class-banner-top">UNCLASSIFIED // OSINT // REL TO FVEY</div>
+
+<!-- Navigation -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="/" class="nav-brand" style="text-decoration:none;">
+            <span class="flag">&#127462;&#127482;</span>
+            <div>
+                <span class="brand-name">ECHELON VANTAGE</span>
+                <span class="brand-sub">FVEY SPACE DOMAIN AWARENESS PLATFORM</span>
+            </div>
+        </a>
+        <div class="nav-links">
+            <a href="/#capabilities">CAPABILITIES</a>
+            <a href="/#platform">PLATFORM</a>
+            <a href="/pricing" class="active-link">PRICING</a>
+            <a href="/#whitepaper">WHITEPAPER</a>
+            <a href="/app" class="nav-cta">ACCESS PLATFORM &rarr;</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="pricing-hero">
+    <div class="section-label">// ACCESS TIERS</div>
+    <h1>OPERATIONAL <span class="amber">ACCESS TIERS</span></h1>
+    <p class="hero-sub">
+        Three tiers of access to the world's most comprehensive OSINT-based space domain awareness platform. From individual analyst seats to full enterprise deployment with dedicated infrastructure and AUKUS/FVEY compliance packaging.
+    </p>
+</section>
+
+<!-- Comparison Strip -->
+<div class="comparison-strip">
+    <div class="comparison-inner">
+        <div class="comparison-item">
+            <span class="comp-val">116</span>
+            <span class="comp-lbl">API ENDPOINTS</span>
+        </div>
+        <div class="comparison-item">
+            <span class="comp-val">16</span>
+            <span class="comp-lbl">DASHBOARD TABS</span>
+        </div>
+        <div class="comparison-item">
+            <span class="comp-val">800+</span>
+            <span class="comp-lbl">ADVERSARY SATS</span>
+        </div>
+        <div class="comparison-item">
+            <span class="comp-val">33</span>
+            <span class="comp-lbl">ASAT SYSTEMS</span>
+        </div>
+        <div class="comparison-item">
+            <span class="comp-val">0</span>
+            <span class="comp-lbl">ITAR RESTRICTIONS</span>
+        </div>
+    </div>
+</div>
+
+<!-- Pricing Cards -->
+<div style="padding-top: 60px;"></div>
+<div class="pricing-grid">
+
+    <!-- ANALYST -->
+    <div class="pricing-card">
+        <div class="tier-icon">[ ANALYST ]</div>
+        <div class="tier-name">ANALYST</div>
+        <div class="tier-price">
+            <span class="currency">$</span>499<span class="period"> /MONTH</span>
+        </div>
+        <div class="tier-desc">
+            Full dashboard access for individual analysts and small teams. Real-time space domain awareness at your fingertips.
+        </div>
+        <ul class="tier-features">
+            <li>Full dashboard access (16 tabs)</li>
+            <li>Real-time satellite tracking</li>
+            <li>AI deduction engine</li>
+            <li>Space weather monitoring</li>
+            <li>Contested zone overmatch scoring</li>
+            <li>Daily intelligence briefs</li>
+            <li>Email support</li>
+        </ul>
+        <a href="#" class="tier-btn tier-btn-primary" id="btn-analyst" onclick="return false;">SUBSCRIBE</a>
+        <a href="mailto:sales@echelonvantage.com?subject=Echelon%20Vantage%20%E2%80%94%20Analyst%20Tier%20Access" class="tier-fallback">CONTACT FOR ACCESS &rarr;</a>
+    </div>
+
+    <!-- OPERATOR -->
+    <div class="pricing-card featured">
+        <div class="tier-icon">[ OPERATOR ]</div>
+        <div class="tier-name">OPERATOR</div>
+        <div class="tier-price">
+            <span class="currency">$</span>2,499<span class="period"> /MONTH</span>
+        </div>
+        <div class="tier-desc">
+            Full platform access with API integration, custom monitoring, and advanced analytical capabilities for operational teams.
+        </div>
+        <ul class="tier-features">
+            <li>Everything in Analyst</li>
+            <li>API access (all 116 endpoints)</li>
+            <li>Custom hotspot monitoring</li>
+            <li>Wargame scenario builder</li>
+            <li>Kill chain & escalation analysis</li>
+            <li>Priority support</li>
+            <li>Quarterly strategic briefing</li>
+        </ul>
+        <a href="#" class="tier-btn tier-btn-primary" id="btn-operator" onclick="return false;">SUBSCRIBE</a>
+        <a href="mailto:sales@echelonvantage.com?subject=Echelon%20Vantage%20%E2%80%94%20Operator%20Tier%20Access" class="tier-fallback">CONTACT FOR ACCESS &rarr;</a>
+    </div>
+
+    <!-- ENTERPRISE -->
+    <div class="pricing-card">
+        <div class="tier-icon">[ ENTERPRISE ]</div>
+        <div class="tier-name">ENTERPRISE</div>
+        <div class="tier-price">
+            <span class="currency">$</span>9,999<span class="period"> /MONTH</span>
+        </div>
+        <div class="tier-desc">
+            Dedicated instance with custom integrations, on-premises deployment, and full compliance packaging for defence organisations.
+        </div>
+        <ul class="tier-features">
+            <li>Everything in Operator</li>
+            <li>Dedicated instance</li>
+            <li>Custom integrations</li>
+            <li>On-premises deployment option</li>
+            <li>24/7 support</li>
+            <li>Monthly strategic briefing</li>
+            <li>AUKUS/FVEY compliance package</li>
+        </ul>
+        <a href="mailto:sales@echelonvantage.com?subject=Echelon%20Vantage%20%E2%80%94%20Enterprise%20Tier%20Enquiry" class="tier-btn tier-btn-contact">CONTACT SALES</a>
+    </div>
+
+</div>
+
+<!-- FAQ Section -->
+<hr class="section-divider">
+<section class="faq-section">
+    <div class="faq-header">
+        <div class="section-label">// FREQUENTLY ASKED QUESTIONS</div>
+        <h2>FAQ</h2>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-q">What data sources does the platform use?</div>
+        <div class="faq-a">
+            All intelligence is derived from open-source, publicly available data. Sources include CelesTrak orbital data, NOAA Space Weather Prediction Center, NASA APIs (NEO, DONKI, EONET, EPIC, FIRMS), Launch Library 2, SatNOGS RF monitoring, USGS seismic data, ArXiv academic papers, social media OSINT, and more. No classified information is ingested, processed, or stored. The platform is fully OSINT-based.
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-q">Is there a free trial?</div>
+        <div class="faq-a">
+            Yes. The full dashboard at <a href="/app" style="color: var(--amber); text-decoration: none;">/app</a> is freely accessible for evaluation. This includes all 16 dashboard tabs, real-time satellite tracking, AI deductions, and space weather monitoring. Paid tiers add API access for programmatic integration, custom hotspot monitoring, the wargame scenario builder, dedicated support, strategic briefings, and enterprise deployment options.
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-q">Is the platform ITAR restricted?</div>
+        <div class="faq-a">
+            No. Echelon Vantage is fully ITAR-free. All intelligence is derived from open sources with no classification restrictions. The platform can be shared across all Five Eyes partners, NATO allies, CSpO members, and coalition partners without export control concerns or foreign disclosure requirements. Australian-owned and operated with no US-origin controlled technology.
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-q">Can it be deployed on-premises?</div>
+        <div class="faq-a">
+            Yes, on the Enterprise tier. Echelon Vantage can be deployed to air-gapped networks, classified enclaves, or on-premises infrastructure. The platform operates with cached data feeds for environments without external network access. Contact sales@echelonvantage.com for deployment architecture discussions and requirements.
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-q">Which countries can access the platform?</div>
+        <div class="faq-a">
+            Echelon Vantage is available to all Five Eyes partner nations (Australia, United States, United Kingdom, Canada, New Zealand) and allied nations. This includes NATO members, CSpO participants (France, Germany), Quad partners (India, Japan), and other allied defence and intelligence organisations. The OSINT-based approach eliminates the access restrictions that limit classified SDA product dissemination.
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<hr class="section-divider">
+<section class="cta-section">
+    <h2>READY TO DEPLOY?</h2>
+    <p>
+        Access the world's most comprehensive OSINT-based space domain awareness platform. Start with the free dashboard or contact our team for a capability demonstration and deployment discussion.
+    </p>
+    <div class="cta-buttons">
+        <a href="/app" class="cta-primary">ACCESS DASHBOARD &rarr;</a>
+        <a href="mailto:sales@echelonvantage.com?subject=Echelon%20Vantage%20%E2%80%94%20Capability%20Demonstration%20Request" class="cta-secondary">REQUEST DEMO</a>
+    </div>
+</section>
+
+<!-- Footer -->
+<div class="footer">
+    <p style="color: var(--text-dim); letter-spacing: 2px; margin-bottom: 12px;">UNCLASSIFIED // OSINT // REL TO FVEY</p>
+    <p>&copy; 2026 Echelon Vantage Pty Ltd. All rights reserved.</p>
+    <p>Australian-owned and operated. ABN registered.</p>
+    <p style="margin-top: 12px;">All intelligence derived from open sources. No classified information.</p>
+</div>
+<div class="class-banner class-banner-bottom">UNCLASSIFIED // OSINT // REL TO FVEY</div>
+
+<!-- Stripe Checkout Integration -->
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    const stripe = Stripe('pk_live_51TBpM9JMFxLFml3dt93v3BYISuJiKjdfHRLguEwz5mu0XXAEL2MRINULyR2DXWoEVingtVW7CENTvWWIscs4tZwo00zh6yL9xu');
+
+    // Stripe Price IDs — replace these with actual Stripe price IDs once products are created
+    const PRICE_IDS = {
+        analyst: null,   // e.g. 'price_xxxxxxxxxxxxx'
+        operator: null,  // e.g. 'price_xxxxxxxxxxxxx'
+    };
+
+    document.getElementById('btn-analyst').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (PRICE_IDS.analyst) {
+            stripe.redirectToCheckout({ lineItems: [{ price: PRICE_IDS.analyst, quantity: 1 }], mode: 'subscription', successUrl: window.location.origin + '/app?session_id={CHECKOUT_SESSION_ID}', cancelUrl: window.location.origin + '/pricing' });
+        } else {
+            window.location.href = 'mailto:sales@echelonvantage.com?subject=Echelon%20Vantage%20%E2%80%94%20Analyst%20Tier%20Access';
+        }
+    });
+
+    document.getElementById('btn-operator').addEventListener('click', function(e) {
+        e.preventDefault();
+        if (PRICE_IDS.operator) {
+            stripe.redirectToCheckout({ lineItems: [{ price: PRICE_IDS.operator, quantity: 1 }], mode: 'subscription', successUrl: window.location.origin + '/app?session_id={CHECKOUT_SESSION_ID}', cancelUrl: window.location.origin + '/pricing' });
+        } else {
+            window.location.href = 'mailto:sales@echelonvantage.com?subject=Echelon%20Vantage%20%E2%80%94%20Operator%20Tier%20Access';
+        }
+    });
+</script>
+
+</body>
+</html>

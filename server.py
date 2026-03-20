@@ -67,6 +67,10 @@ async def root():
 async def dashboard():
     return FileResponse(os.path.join(static_dir, "index.html"))
 
+@app.get("/pricing")
+async def pricing():
+    return FileResponse(os.path.join(static_dir, "pricing.html"))
+
 @app.get("/landing")
 async def landing():
     return FileResponse(os.path.join(static_dir, "landing.html"))
