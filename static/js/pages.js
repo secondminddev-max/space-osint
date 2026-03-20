@@ -56,14 +56,109 @@ function zuluFull() {
     return new Date().toISOString().substring(0, 19).replace('T', ' ') + 'Z';
 }
 
+// Client-side API cache — instant responses for repeated calls
+var _apiCache = {};
+var _apiCacheTTL = {
+    '/api/status': 30,
+    '/api/adversary/stats': 60,
+    '/api/launches': 120,
+    '/api/weather': 60,
+    '/api/news': 300,
+    '/api/missile-asat/summary': 600,
+    '/api/missile-asat': 600,
+    '/api/ground-stations/summary': 600,
+    '/api/ground-stations': 600,
+    '/api/threat/overview': 300,
+    '/api/threat/vulnerabilities': 600,
+    '/api/threat/recommendations': 600,
+    '/api/threat/scenarios': 600,
+    '/api/deductions/priority': 120,
+    '/api/deductions/narrative': 300,
+    '/api/deductions': 120,
+    '/api/overmatch/summary': 120,
+    '/api/overmatch': 120,
+    '/api/wargame/scenarios': 600,
+    '/api/intel/sitrep': 60,
+    '/api/intel/hotspots': 120,
+    '/api/intel/social': 300,
+    '/api/intel/proximity': 120,
+    '/api/intel/research': 300,
+    '/api/incidents/stats': 600,
+    '/api/incidents': 600,
+    '/api/futures/summary': 600,
+    '/api/futures': 600,
+    '/api/conferences': 600,
+    '/api/conferences/upcoming': 600,
+    '/api/industry/contractors': 3600,
+    '/api/industry/contracts': 3600,
+    '/api/industry/supply-chain': 3600,
+    '/api/industry/grants': 3600,
+    '/api/industry/overview': 3600,
+    '/api/environment/enhanced': 120,
+    '/api/analysis/engagement-envelopes': 600,
+    '/api/analysis/escalation-ladder': 3600,
+    '/api/analysis/kill-chains': 3600,
+    '/api/analysis/mission-assurance': 600,
+    '/api/analysis/alliances': 3600,
+    '/api/analysis/treaties': 3600,
+    '/api/analysis/cislunar': 3600,
+    '/api/analysis/indicators-warnings': 300,
+    '/api/analysis/sigint-mapping': 3600,
+    '/api/analysis/maneuver-indicators': 600,
+    '/api/analysis/debris-environment': 3600,
+    '/api/analysis/constellation/yaogan': 300,
+    '/api/analysis/constellation/jilin': 300,
+    '/api/analysis/constellation/beidou': 300,
+    '/api/analysis/constellation/glonass': 300,
+    '/api/analysis/orbat': 300,
+    '/api/analysis/correlations': 300,
+    '/api/analysis/daily-summary': 300,
+};
+
 async function api(url) {
+    // Check client cache first
+    var now = Date.now() / 1000;
+    var cached = _apiCache[url];
+    if (cached && (now - cached.ts) < (cached.ttl || 60)) {
+        return cached.data;
+    }
     try {
         var r = await fetch(url);
-        return r.ok ? await r.json() : null;
+        if (!r.ok) return null;
+        var data = await r.json();
+        // Find TTL — match exact or prefix
+        var ttl = _apiCacheTTL[url] || 60;
+        if (!_apiCacheTTL[url]) {
+            // Try prefix match
+            var keys = Object.keys(_apiCacheTTL);
+            for (var i = 0; i < keys.length; i++) {
+                if (url.indexOf(keys[i]) === 0) { ttl = _apiCacheTTL[keys[i]]; break; }
+            }
+        }
+        _apiCache[url] = { data: data, ts: now, ttl: ttl };
+        return data;
     } catch (e) {
+        // Return stale cache if available
+        if (cached) return cached.data;
         return null;
     }
 }
+
+// Preload critical data on first visit so all pages are instant
+function preloadAllData() {
+    var critical = [
+        '/api/adversary/stats', '/api/launches', '/api/weather',
+        '/api/missile-asat/summary', '/api/ground-stations/summary',
+        '/api/threat/overview', '/api/deductions/priority',
+        '/api/intel/sitrep', '/api/satellites/stats',
+        '/api/overmatch/summary', '/api/wargame/scenarios',
+        '/api/incidents/stats', '/api/futures/summary',
+        '/api/conferences', '/api/industry/contractors',
+    ];
+    critical.forEach(function(url) { api(url); });
+}
+// Start preloading immediately
+preloadAllData();
 
 function registerInterval(fn, ms) {
     var id = setInterval(fn, ms);

@@ -53,8 +53,28 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Space OSINT Operating Centre", lifespan=lifespan)
 
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"])
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+# Pre-warm the satellite catalog in background on startup
+import asyncio
+
+async def _prewarm():
+    """Pre-warm all heavy endpoints at startup so first user gets instant response."""
+    await asyncio.sleep(2)  # let server finish booting
+    try:
+        await celestrak.fetch_catalog(_client, "active")
+        print("[BOOT] Active catalog pre-warmed")
+    except Exception:
+        print("[BOOT] Active catalog pre-warm failed (using seed)")
+
+@app.on_event("startup")
+async def startup_prewarm():
+    asyncio.create_task(_prewarm())
 
 
 # ---- Core Routes ----
