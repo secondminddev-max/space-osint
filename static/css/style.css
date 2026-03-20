@@ -2753,3 +2753,104 @@ body {
     .env-status-cell { padding: 5px 4px; }
     .env-status-val { font-size: 12px; }
 }
+
+
+/* ================================================================
+   NEW FEATURE INTEGRATION STYLES
+   Deductions, Alliances, Treaties, SIGINT, Maneuver, Cislunar
+   ================================================================ */
+
+/* ---- Deduction panel on CMD map ---- */
+#deductions-panel .op-head {
+    background: rgba(0,212,255,0.04);
+    border-bottom-color: rgba(0,212,255,0.15);
+}
+
+#deductions-panel {
+    border-color: rgba(0,212,255,0.15);
+}
+
+#deductions-panel:hover {
+    border-color: rgba(0,212,255,0.30);
+}
+
+/* ---- AI Deductions grid in STRATEGY ---- */
+#strategy-deductions-panel {
+    border-top: 2px solid var(--cyan);
+}
+
+#strategy-deductions-panel .panel-head {
+    background: rgba(0,212,255,0.03);
+}
+
+/* ---- Threat Narrative ---- */
+#strategy-narrative-panel {
+    border-top: 2px solid var(--red);
+}
+
+#strategy-narrative-panel .panel-head {
+    background: rgba(255,32,32,0.03);
+}
+
+/* ---- Daily Brief ---- */
+#strategy-dailybrief-panel {
+    border-top: 2px solid var(--amber);
+}
+
+/* ---- Alliance panel styling ---- */
+#fvey-alliances-panel {
+    border-top: 2px solid var(--cyan);
+}
+
+#fvey-alliances-panel .panel-head {
+    background: rgba(0,212,255,0.03);
+}
+
+/* ---- Treaty panel styling ---- */
+#fvey-treaties-panel {
+    border-top: 2px solid var(--amber);
+}
+
+/* ---- SIGINT panel on GROUND page ---- */
+#ground-sigint-panel {
+    border-top: 2px solid var(--cis);
+    margin-top: 4px;
+}
+
+#ground-sigint-panel .panel-head {
+    background: rgba(255,140,0,0.03);
+}
+
+/* ---- Maneuver Indicators panel ---- */
+#incident-maneuver-panel {
+    border-top: 2px solid var(--red);
+}
+
+#incident-maneuver-panel .panel-head {
+    background: rgba(255,32,32,0.03);
+}
+
+/* ---- Cislunar panel on ARCHITECTURE page ---- */
+#arch-cislunar-panel {
+    border-top: 2px solid var(--nkor);
+}
+
+#arch-cislunar-panel .panel-head {
+    background: rgba(192,64,255,0.03);
+}
+
+/* ---- Constellation analysis container ---- */
+#adv-constellation-container .section-head {
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+}
+
+/* ---- Engagement Envelopes ---- */
+#asat-envelopes-container .panel {
+    border-top: 2px solid var(--red);
+}
+
+/* ---- Global environment feeds ---- */
+#env-global-feeds .panel {
+    border-top: 1px solid rgba(0,212,255,0.15);
+}

@@ -269,6 +269,10 @@ Pages.cmd = async function (el) {
                         '<div class="op-head">ADVERSARY LAUNCH ACTIVITY ' + liveIndicator('1S') + '</div>' +
                         '<div class="op-body" id="ov-adv-launches" style="max-height:130px"></div>' +
                     '</div>' +
+                    '<div class="overlay-panel" id="deductions-panel">' +
+                        '<div class="op-head" style="color:var(--cyan)">TOP DEDUCTIONS ' + livePulse('120S', '') + '</div>' +
+                        '<div class="op-body" id="ov-deductions" style="max-height:160px"><div class="empty-state">LOADING DEDUCTIONS</div></div>' +
+                    '</div>' +
                 '</div>' +
             '</div>' +
         '</div>' +
@@ -785,6 +789,41 @@ Pages.cmd = async function (el) {
         if (w.kp_history && typeof updateKpChart === 'function') updateKpChart(w.kp_history);
     }, 60000);
 
+    // --- TOP DEDUCTIONS (CMD overlay) ---
+    function renderCmdDeductions(data) {
+        var dedEl = document.getElementById('ov-deductions');
+        if (!dedEl) return;
+        if (!data || !Array.isArray(data) || !data.length) {
+            dedEl.innerHTML = '<div class="empty-state">NO DEDUCTIONS AVAILABLE</div>';
+            return;
+        }
+        var items = data.slice(0, 3);
+        var dHtml = '';
+        items.forEach(function(d, idx) {
+            var conf = d.confidence || d.priority || 'medium';
+            var confLower = (typeof conf === 'string') ? conf.toLowerCase() : 'medium';
+            var badgeCls = confLower === 'critical' || confLower === 'high' ? 'badge-critical' : confLower === 'medium' ? 'badge-high' : 'badge-medium';
+            dHtml += '<div style="padding:3px 0;border-bottom:1px solid rgba(0,212,255,0.08)">' +
+                '<div style="display:flex;align-items:center;gap:4px">' +
+                '<span style="color:var(--cyan);font-size:9px;font-weight:normal">#' + (idx + 1) + '</span>' +
+                '<span class="badge ' + badgeCls + '">' + (d.category || confLower).toUpperCase() + '</span>' +
+                '</div>' +
+                '<div style="font-size:9px;color:var(--white);line-height:1.4;margin-top:2px">' + (d.title || d.deduction || '').substring(0, 100) + '</div>' +
+                '</div>';
+        });
+        dHtml += '<div style="font-size:7px;color:var(--text-muted);margin-top:3px">' + zulu() + '</div>';
+        dedEl.innerHTML = dHtml;
+    }
+
+    api('/api/deductions/priority').then(function(dedData) {
+        renderCmdDeductions(dedData);
+    });
+
+    registerInterval(async function() {
+        var freshDed = await api('/api/deductions/priority');
+        renderCmdDeductions(freshDed);
+    }, 120000);
+
     // --- AUTO-REFRESH: Launches every 120s ---
     registerInterval(async function() {
         var freshLaunches = await api('/api/launches');
@@ -1001,7 +1040,9 @@ Pages.adversary = async function (el) {
                         '<th>DESIGNATION</th><th>NORAD</th><th>MISSION</th><th>REGIME</th><th>ALT KM</th><th>INC</th>' +
                     '</tr></thead><tbody>' + satRowsHtml + '</tbody></table>' +
                 '</div>' +
-            '</div>';
+            '</div>' +
+            '<!-- CONSTELLATION ANALYSIS -->' +
+            '<div id="adv-constellation-container"></div>';
 
         // Initialize mini map — larger and more prominent
         setTimeout(function() {
@@ -1027,6 +1068,63 @@ Pages.adversary = async function (el) {
                 });
             }
         }, 150);
+
+        // Fetch constellation analysis for relevant constellations
+        var constellationMap = {
+            PRC: ['yaogan', 'jilin', 'beidou', 'shijian'],
+            CIS: ['glonass', 'cosmos_isr'],
+            NKOR: [],
+            IRAN: []
+        };
+        var constellations = constellationMap[code] || [];
+        if (constellations.length > 0) {
+            var constContainer = document.getElementById('adv-constellation-container');
+            if (constContainer) {
+                constContainer.innerHTML = '<div class="section-head" style="margin-top:4px">CONSTELLATION ANALYSIS ' + liveIndicator('') + '</div>' +
+                    '<div id="adv-constellation-body"><div class="loading">LOADING CONSTELLATION DATA</div></div>';
+
+                var constPromises = constellations.map(function(cn) {
+                    return api('/api/analysis/constellation/' + cn);
+                });
+                Promise.all(constPromises).then(function(constResults) {
+                    var constBody = document.getElementById('adv-constellation-body');
+                    if (!constBody) return;
+                    var cHtml = '<div class="asat-grid">';
+                    constellations.forEach(function(cn, ci) {
+                        var cData = constResults[ci];
+                        if (!cData) {
+                            cHtml += '<div class="panel"><div class="panel-head"><h3>' + cn.toUpperCase() + '</h3></div>' +
+                                '<div class="panel-body"><div class="empty-state">DATA UNAVAILABLE</div></div></div>';
+                            return;
+                        }
+                        var cName = cData.constellation || cData.name || cn.toUpperCase();
+                        var cTotal = cData.total_satellites || cData.count || 0;
+                        var cAssess = cData.assessment || cData.analysis || cData.summary || '';
+                        var cCapabilities = cData.capabilities || cData.key_capabilities || [];
+                        var cRole = cData.primary_role || cData.mission || '';
+                        cHtml += '<div class="panel"><div class="panel-head"><h3>' + cName.toUpperCase() + '</h3><span class="ph-meta">' +
+                            (cTotal ? '<span class="badge badge-critical">' + cTotal + ' SATS</span>' : '') + '</span></div>' +
+                            '<div class="panel-body">';
+                        if (cRole) cHtml += '<div style="font-size:9px;color:var(--amber);letter-spacing:0.5px;margin-bottom:4px">ROLE: ' + cRole + '</div>';
+                        if (cAssess) cHtml += '<div style="font-size:10px;color:var(--text);line-height:1.5;margin-bottom:6px">' + (typeof cAssess === 'string' ? cAssess : JSON.stringify(cAssess)) + '</div>';
+                        if (Array.isArray(cCapabilities) && cCapabilities.length) {
+                            cHtml += '<div><span class="intel-label">CAPABILITIES</span><ul style="margin:2px 0 0 14px;font-size:9px;color:var(--text)">';
+                            cCapabilities.forEach(function(cap) {
+                                cHtml += '<li style="margin-bottom:2px;line-height:1.3">' + (typeof cap === 'string' ? cap : JSON.stringify(cap)) + '</li>';
+                            });
+                            cHtml += '</ul></div>';
+                        }
+                        // Render any other top-level fields
+                        if (cData.orbital_planes) cHtml += '<div style="font-size:9px;color:var(--text-dim);margin-top:4px">ORBITAL PLANES: ' + cData.orbital_planes + '</div>';
+                        if (cData.revisit_time) cHtml += '<div style="font-size:9px;color:var(--text-dim)">REVISIT: ' + cData.revisit_time + '</div>';
+                        if (cData.coverage) cHtml += '<div style="font-size:9px;color:var(--text-dim)">COVERAGE: ' + cData.coverage + '</div>';
+                        cHtml += '</div></div>';
+                    });
+                    cHtml += '</div>';
+                    constBody.innerHTML = cHtml;
+                });
+            }
+        }
     }
 
     renderCountry('PRC');
@@ -1492,7 +1590,7 @@ Pages.ground = async function (el) {
                 '</div>' +
             '</div>' +
         '</div>' +
-        '<div class="grid-2">' +
+        '<div class="grid-2 mb-2">' +
             '<div class="panel">' +
                 '<div class="panel-head"><h3>ADVERSARY FACILITIES</h3><span class="ph-meta"><span class="badge badge-critical">' + adversary.length + '</span></span></div>' +
                 '<div class="panel-body" style="max-height:350px"><table class="data-table"><thead><tr><th>FACILITY</th><th>NATION</th><th>TYPE</th><th>DESCRIPTION</th></tr></thead><tbody>' + advTableHtml + '</tbody></table></div>' +
@@ -1501,7 +1599,13 @@ Pages.ground = async function (el) {
                 '<div class="panel-head"><h3>FVEY FACILITIES</h3><span class="ph-meta"><span class="badge badge-fvey">' + fvey.length + '</span></span></div>' +
                 '<div class="panel-body" style="max-height:350px"><table class="data-table"><thead><tr><th>FACILITY</th><th>NATION</th><th>TYPE</th><th>DESCRIPTION</th></tr></thead><tbody>' + fveyTableHtml + '</tbody></table></div>' +
             '</div>' +
-        '</div></div>';
+        '</div>' +
+        '<!-- SIGINT MAPPING -->' +
+        '<div class="panel" id="ground-sigint-panel">' +
+            '<div class="panel-head"><h3>SIGINT / ELINT CONSTELLATION MAPPING</h3><span class="ph-meta">' + liveIndicator('') + '</span></div>' +
+            '<div class="panel-body" id="ground-sigint-body"><div class="loading">LOADING SIGINT DATA</div></div>' +
+        '</div>' +
+        '</div>';
 
     setTimeout(function() {
         var mapEl = document.getElementById('gs-map');
@@ -1548,6 +1652,47 @@ Pages.ground = async function (el) {
             ]), { className: 'sat-popup', closeButton: false }).addTo(gmap);
         });
     }, 150);
+
+    // Fetch SIGINT mapping data
+    api('/api/analysis/sigint-mapping').then(function(sigintData) {
+        var sigBody = document.getElementById('ground-sigint-body');
+        if (!sigBody) return;
+        if (!sigintData) {
+            sigBody.innerHTML = '<div class="empty-state">SIGINT DATA UNAVAILABLE</div>';
+            return;
+        }
+        var sHtml = '';
+        if (typeof sigintData === 'string') {
+            sHtml = '<div class="intel-summary" style="white-space:pre-line;line-height:1.6">' + sigintData + '</div>';
+        } else {
+            var sigArr = Array.isArray(sigintData) ? sigintData : (sigintData.constellations || sigintData.systems || sigintData.entries || [sigintData]);
+            if (!Array.isArray(sigArr)) sigArr = [sigArr];
+            sHtml = '<div class="asat-grid">';
+            sigArr.forEach(function(s) {
+                if (typeof s === 'string') {
+                    sHtml += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px;color:var(--text)">' + s + '</div>';
+                    return;
+                }
+                var sName = s.name || s.constellation || s.system || 'SIGINT SYSTEM';
+                var sCountry = s.country || s.operator || '';
+                var sCol = countryColor(sCountry === 'Russia' ? 'CIS' : sCountry === 'China' ? 'PRC' : sCountry) || 'var(--amber)';
+                sHtml += '<div class="threat-card severity-high" style="border-left-color:' + sCol + '">' +
+                    '<div class="tc-header">' +
+                        (sCountry ? '<span class="badge" style="background:rgba(255,255,255,0.05);color:' + sCol + ';border:1px solid ' + sCol + '">' + sCountry.toUpperCase() + '</span> ' : '') +
+                        '<span class="tc-title">' + sName + '</span>' +
+                    '</div>' +
+                    '<div class="tc-body">' + (s.description || s.mission || s.assessment || '') + '</div>' +
+                    '<div class="tc-meta">' +
+                        (s.frequency_range ? 'FREQ: ' + s.frequency_range + ' // ' : '') +
+                        (s.orbit ? 'ORBIT: ' + s.orbit + ' // ' : '') +
+                        (s.count ? 'COUNT: ' + s.count : '') +
+                    '</div>' +
+                '</div>';
+            });
+            sHtml += '</div>';
+        }
+        sigBody.innerHTML = sHtml;
+    });
 };
 
 
@@ -1634,7 +1779,10 @@ Pages.missile = async function (el) {
             '<div class="filter-tab" data-filter="Iran" style="color:#FFD700">IRAN (' + (byCountry['Iran'] || 0) + ')</div>' +
             '<div class="filter-tab" data-filter="critical" style="color:var(--red)">CRITICAL (' + critical.length + ')</div>' +
         '</div>' +
-        '<div id="missile-detail"></div></div>';
+        '<div id="missile-detail"></div>' +
+        '<!-- ENGAGEMENT ENVELOPES -->' +
+        '<div id="asat-envelopes-container"></div>' +
+        '</div>';
 
     function renderSystems(filter) {
         var systems = allSystems;
@@ -1672,6 +1820,45 @@ Pages.missile = async function (el) {
             tab.classList.add('active');
             renderSystems(tab.dataset.filter);
         });
+    });
+
+    // Fetch engagement envelopes (optional endpoint)
+    api('/api/analysis/engagement-envelopes').then(function(envData) {
+        var envContainer = document.getElementById('asat-envelopes-container');
+        if (!envContainer || !envData) return;
+        var eHtml = '<div class="panel" style="margin-top:4px">' +
+            '<div class="panel-head"><h3>ENGAGEMENT ENVELOPES</h3><span class="ph-meta">' + liveIndicator('') + '</span></div>' +
+            '<div class="panel-body">';
+        if (typeof envData === 'string') {
+            eHtml += '<div class="intel-summary" style="white-space:pre-line">' + envData + '</div>';
+        } else {
+            var envArr = Array.isArray(envData) ? envData : (envData.envelopes || envData.systems || [envData]);
+            if (!Array.isArray(envArr)) envArr = [envArr];
+            eHtml += '<div class="asat-grid">';
+            envArr.forEach(function(e) {
+                if (typeof e === 'string') {
+                    eHtml += '<div style="padding:4px;font-size:10px;color:var(--text)">' + e + '</div>';
+                    return;
+                }
+                var eName = e.name || e.system || 'SYSTEM';
+                var eCountry = e.country || e.operator || '';
+                eHtml += '<div class="threat-card severity-critical" style="border-left-color:var(--red)">' +
+                    '<div class="tc-header">' +
+                        (eCountry ? countryBadge(eCountry === 'Russia' ? 'CIS' : eCountry === 'DPRK' ? 'NKOR' : eCountry === 'Iran' ? 'IRAN' : eCountry) + ' ' : '') +
+                        '<span class="tc-title">' + eName + '</span>' +
+                    '</div>' +
+                    '<div class="tc-body">' + (e.description || '') + '</div>' +
+                    '<div class="tc-meta">' +
+                        (e.min_altitude ? 'MIN ALT: ' + e.min_altitude + ' KM // ' : '') +
+                        (e.max_altitude ? 'MAX ALT: ' + e.max_altitude + ' KM // ' : '') +
+                        (e.engagement_time ? 'ENG TIME: ' + e.engagement_time : '') +
+                    '</div>' +
+                '</div>';
+            });
+            eHtml += '</div>';
+        }
+        eHtml += '</div></div>';
+        envContainer.innerHTML = eHtml;
     });
 };
 
@@ -1789,7 +1976,119 @@ Pages.fvey = async function (el) {
                 '<div class="panel-head"><h3>POLICY RECOMMENDATIONS</h3><span class="ph-meta"><span class="badge badge-low">ADVISE</span> ' + recs.length + '</span></div>' +
                 '<div class="panel-body" style="max-height:calc(100vh - 420px)">' + recCardsHtml + '</div>' +
             '</div>' +
-        '</div></div>';
+        '</div>' +
+        '<!-- ALLIANCE & TREATY SECTIONS -->' +
+        '<div class="grid-2" style="margin-top:4px">' +
+            '<div class="panel" id="fvey-alliances-panel">' +
+                '<div class="panel-head"><h3>ALLIANCE TRACKER</h3><span class="ph-meta">' + liveIndicator('') + '</span></div>' +
+                '<div class="panel-body" id="fvey-alliances-body"><div class="loading">LOADING ALLIANCE DATA</div></div>' +
+            '</div>' +
+            '<div class="panel" id="fvey-treaties-panel">' +
+                '<div class="panel-head"><h3>TREATY / NORMS STATUS</h3><span class="ph-meta">' + liveIndicator('') + '</span></div>' +
+                '<div class="panel-body" id="fvey-treaties-body"><div class="loading">LOADING TREATY DATA</div></div>' +
+            '</div>' +
+        '</div>' +
+        '<div id="fvey-mission-assurance-container"></div>' +
+        '</div>';
+
+    // Fetch alliance, treaty, and mission-assurance data
+    Promise.all([
+        api('/api/analysis/alliances'),
+        api('/api/analysis/treaties'),
+        api('/api/analysis/mission-assurance'),
+    ]).then(function(fveyResults) {
+        var alliances = fveyResults[0];
+        var treaties = fveyResults[1];
+        var missionAssurance = fveyResults[2];
+
+        // ALLIANCES
+        var alliBody = document.getElementById('fvey-alliances-body');
+        if (alliBody) {
+            if (!alliances) {
+                alliBody.innerHTML = '<div class="empty-state">ALLIANCE DATA UNAVAILABLE</div>';
+            } else {
+                var aHtml = '';
+                var alliArr = Array.isArray(alliances) ? alliances : (alliances.alliances || alliances.frameworks || [alliances]);
+                if (!Array.isArray(alliArr)) alliArr = [alliArr];
+                alliArr.forEach(function(a) {
+                    if (typeof a === 'string') {
+                        aHtml += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px;color:var(--text)">' + a + '</div>';
+                        return;
+                    }
+                    var aName = a.name || a.alliance || a.framework || 'Alliance';
+                    var aMembers = a.members || a.nations || [];
+                    var aStatus = a.status || a.operational_status || '';
+                    var aFocus = a.focus_areas || a.capabilities || [];
+                    aHtml += '<div class="threat-card severity-low" style="border-left-color:var(--cyan)">' +
+                        '<div class="tc-header"><span class="badge badge-fvey">' + aName.toUpperCase().substring(0, 12) + '</span> <span class="tc-title">' + aName + '</span></div>' +
+                        '<div class="tc-body">' + (a.description || a.summary || '') + '</div>' +
+                        '<div class="tc-meta">' +
+                            (Array.isArray(aMembers) && aMembers.length ? 'MEMBERS: ' + aMembers.join(', ') + ' // ' : '') +
+                            (aStatus ? 'STATUS: <span style="color:var(--green)">' + aStatus.toUpperCase() + '</span>' : '') +
+                        '</div>' +
+                        (Array.isArray(aFocus) && aFocus.length ? '<div class="tc-source">FOCUS: ' + aFocus.join(', ') + '</div>' : '') +
+                    '</div>';
+                });
+                alliBody.innerHTML = aHtml || '<div class="empty-state">NO ALLIANCE DATA</div>';
+            }
+        }
+
+        // TREATIES
+        var treatBody = document.getElementById('fvey-treaties-body');
+        if (treatBody) {
+            if (!treaties) {
+                treatBody.innerHTML = '<div class="empty-state">TREATY DATA UNAVAILABLE</div>';
+            } else {
+                var tHtml = '';
+                var treatArr = Array.isArray(treaties) ? treaties : (treaties.treaties || treaties.norms || [treaties]);
+                if (!Array.isArray(treatArr)) treatArr = [treatArr];
+                treatArr.forEach(function(t) {
+                    if (typeof t === 'string') {
+                        tHtml += '<div style="padding:4px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px;color:var(--text)">' + t + '</div>';
+                        return;
+                    }
+                    var tName = t.name || t.treaty || 'Treaty';
+                    var tStatus = (t.status || t.compliance_status || '').toLowerCase();
+                    var tColor = tStatus === 'active' || tStatus === 'in force' ? 'var(--green)' : tStatus === 'violated' || tStatus === 'withdrawn' ? 'var(--red)' : 'var(--amber)';
+                    var tSeverity = tStatus === 'violated' || tStatus === 'withdrawn' ? 'critical' : tStatus === 'contested' || tStatus === 'under review' ? 'high' : 'low';
+                    tHtml += '<div class="threat-card severity-' + tSeverity + '">' +
+                        '<div class="tc-header">' + badge(tSeverity) + ' <span class="tc-title">' + tName + '</span></div>' +
+                        '<div class="tc-body">' + (t.description || t.summary || '') + '</div>' +
+                        '<div class="tc-meta">' +
+                            'STATUS: <span style="color:' + tColor + '">' + (t.status || 'UNKNOWN').toUpperCase() + '</span>' +
+                            (t.year ? ' // YEAR: ' + t.year : '') +
+                            (t.signatories ? ' // SIGNATORIES: ' + (Array.isArray(t.signatories) ? t.signatories.join(', ') : t.signatories) : '') +
+                        '</div>' +
+                    '</div>';
+                });
+                treatBody.innerHTML = tHtml || '<div class="empty-state">NO TREATY DATA</div>';
+            }
+        }
+
+        // MISSION ASSURANCE (optional - skip gracefully if not available)
+        var maContainer = document.getElementById('fvey-mission-assurance-container');
+        if (maContainer && missionAssurance) {
+            var maHtml = '<div class="panel" style="margin-top:4px"><div class="panel-head"><h3>MISSION ASSURANCE SCORES</h3><span class="ph-meta">' + liveIndicator('') + '</span></div><div class="panel-body">';
+            if (typeof missionAssurance === 'string') {
+                maHtml += '<div class="intel-summary">' + missionAssurance + '</div>';
+            } else if (Array.isArray(missionAssurance)) {
+                missionAssurance.forEach(function(ma) {
+                    var maScore = ma.score || ma.assurance_level || 0;
+                    maHtml += buildResilienceBar(ma.domain || ma.name || 'DOMAIN', typeof maScore === 'number' ? maScore : 50, badge(ma.risk || 'medium'));
+                });
+            } else {
+                Object.entries(missionAssurance).forEach(function(entry) {
+                    if (typeof entry[1] === 'number') {
+                        maHtml += buildResilienceBar(entry[0].replace(/_/g, ' ').toUpperCase(), entry[1], '');
+                    } else if (typeof entry[1] === 'string') {
+                        maHtml += '<div class="intel-field"><span class="intel-label">' + entry[0].replace(/_/g, ' ').toUpperCase() + '</span>' + entry[1] + '</div>';
+                    }
+                });
+            }
+            maHtml += '</div></div>';
+            maContainer.innerHTML = maHtml;
+        }
+    });
 };
 
 
@@ -1959,6 +2258,21 @@ Pages.strategy = async function (el) {
             '<div class="panel-head"><h3>HOTSPOT ANALYSIS</h3><span class="ph-meta">' + hs.length + ' ZONES TRACKED</span></div>' +
             '<div class="panel-body" style="padding:0"><div id="strategy-hotspot-map" class="map-container" style="height:' + mapH + 'px;min-height:' + mapH + 'px"></div></div>' +
         '</div><div class="grid-3 mb-4">' + hotspotCardsHtml + '</div>' : '') +
+        '<!-- AI DEDUCTIONS -->' +
+        '<div class="panel mb-4" id="strategy-deductions-panel">' +
+            '<div class="panel-head"><h3>AI DEDUCTIONS ENGINE</h3><span class="ph-meta">' + liveIndicator('120S') + '</span></div>' +
+            '<div class="panel-body" id="strategy-deductions-body"><div class="loading">LOADING DEDUCTIONS</div></div>' +
+        '</div>' +
+        '<!-- THREAT NARRATIVE -->' +
+        '<div class="panel mb-4" id="strategy-narrative-panel">' +
+            '<div class="panel-head"><h3>THREAT NARRATIVE</h3><span class="ph-meta"><span class="badge badge-critical">AI-GENERATED</span></span></div>' +
+            '<div class="panel-body" id="strategy-narrative-body"><div class="loading">LOADING NARRATIVE</div></div>' +
+        '</div>' +
+        '<!-- DAILY INTELLIGENCE BRIEF -->' +
+        '<div class="panel mb-4" id="strategy-dailybrief-panel">' +
+            '<div class="panel-head"><h3>DAILY INTELLIGENCE BRIEF</h3><span class="ph-meta">' + liveIndicator('300S') + '</span></div>' +
+            '<div class="panel-body" id="strategy-dailybrief-body"><div class="loading">LOADING DAILY SUMMARY</div></div>' +
+        '</div>' +
         '<div class="grid-2">' +
             '<div class="panel"><div class="panel-head"><h3>INTELLIGENCE RESEARCH FEED</h3><span class="ph-meta">' + research.length + ' ITEMS ' + liveIndicator('300S') + '</span></div>' +
                 '<div class="panel-body" style="max-height:400px" id="strategy-research-body">' + researchHtml + '</div></div>' +
@@ -2004,6 +2318,116 @@ Pages.strategy = async function (el) {
             });
         }, 150);
     }
+
+    // --- STRATEGY: AI Deductions, Narrative, Daily Brief ---
+    function renderStrategyDeductions(data) {
+        var dedBody = document.getElementById('strategy-deductions-body');
+        if (!dedBody) return;
+        if (!data || !Array.isArray(data) || !data.length) {
+            dedBody.innerHTML = '<div class="empty-state">DEDUCTIONS DATA UNAVAILABLE</div>';
+            return;
+        }
+        var dHtml = '<div class="asat-grid">';
+        data.forEach(function(d, idx) {
+            var cat = (d.category || 'general').toLowerCase();
+            var confLevel = (d.confidence || d.priority || 'medium').toLowerCase();
+            var badgeCls = confLevel === 'critical' || confLevel === 'high' ? 'critical' : confLevel === 'medium' ? 'high' : 'medium';
+            var catColor = cat === 'threat' ? 'var(--red)' : cat === 'capability' ? 'var(--cis)' : cat === 'intent' ? 'var(--nkor)' : cat === 'vulnerability' ? 'var(--amber)' : 'var(--cyan)';
+            dHtml += '<div class="threat-card severity-' + badgeCls + '" style="border-left-color:' + catColor + '">' +
+                '<div class="tc-header">' +
+                    '<span class="badge" style="background:rgba(0,212,255,0.1);color:' + catColor + ';border:1px solid ' + catColor + '">' + cat.toUpperCase() + '</span> ' +
+                    badge(confLevel) + ' ' +
+                    '<span class="tc-title">' + (d.title || d.deduction || 'Deduction #' + (idx + 1)) + '</span>' +
+                '</div>' +
+                '<div class="tc-body">' + (d.reasoning || d.detail || d.description || '') + '</div>' +
+                '<div class="tc-meta">' +
+                    (d.sources ? 'SOURCES: ' + (Array.isArray(d.sources) ? d.sources.join(', ') : d.sources) : '') +
+                    (d.timestamp ? ' // ' + timeAgo(d.timestamp) : '') +
+                '</div>' +
+            '</div>';
+        });
+        dHtml += '</div>';
+        dedBody.innerHTML = dHtml;
+    }
+
+    function renderStrategyNarrative(data) {
+        var narBody = document.getElementById('strategy-narrative-body');
+        if (!narBody) return;
+        if (!data) {
+            narBody.innerHTML = '<div class="empty-state">NARRATIVE DATA UNAVAILABLE</div>';
+            return;
+        }
+        var narText = '';
+        if (typeof data === 'string') {
+            narText = data;
+        } else if (data.narrative) {
+            narText = data.narrative;
+        } else if (data.document) {
+            narText = data.document;
+        } else if (data.text) {
+            narText = data.text;
+        } else {
+            narText = JSON.stringify(data, null, 2);
+        }
+        narBody.innerHTML = '<div class="intel-summary" style="white-space:pre-line;line-height:1.7;max-height:500px;overflow-y:auto">' + narText + '</div>';
+    }
+
+    function renderDailyBrief(data) {
+        var briefBody = document.getElementById('strategy-dailybrief-body');
+        if (!briefBody) return;
+        if (!data) {
+            briefBody.innerHTML = '<div class="empty-state">DAILY BRIEF UNAVAILABLE</div>';
+            return;
+        }
+        var bHtml = '';
+        if (typeof data === 'string') {
+            bHtml = '<div class="intel-summary" style="white-space:pre-line;line-height:1.7">' + data + '</div>';
+        } else {
+            if (data.title) bHtml += '<div style="font-size:12px;color:var(--amber);letter-spacing:1px;margin-bottom:6px">' + data.title + '</div>';
+            if (data.date) bHtml += '<div style="font-size:8px;color:var(--text-muted);letter-spacing:1px;margin-bottom:6px">' + data.date + '</div>';
+            if (data.summary || data.executive_summary) bHtml += '<div class="intel-summary" style="margin-bottom:8px">' + (data.summary || data.executive_summary) + '</div>';
+            if (data.key_developments && Array.isArray(data.key_developments)) {
+                bHtml += '<div style="margin-top:6px"><span class="intel-label">KEY DEVELOPMENTS</span>';
+                data.key_developments.forEach(function(dev) {
+                    var devText = typeof dev === 'string' ? dev : (dev.title || dev.description || JSON.stringify(dev));
+                    bHtml += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px;color:var(--text);line-height:1.5">' + devText + '</div>';
+                });
+                bHtml += '</div>';
+            }
+            if (data.threat_assessment) bHtml += '<div class="intel-field" style="margin-top:8px"><span class="intel-label">THREAT ASSESSMENT</span><div style="font-size:10px;line-height:1.5;color:var(--text)">' + data.threat_assessment + '</div></div>';
+            if (data.recommendations && Array.isArray(data.recommendations)) {
+                bHtml += '<div style="margin-top:8px"><span class="intel-label" style="color:var(--green)">RECOMMENDATIONS</span>';
+                data.recommendations.forEach(function(rec) {
+                    var recText = typeof rec === 'string' ? rec : (rec.title || rec.description || JSON.stringify(rec));
+                    bHtml += '<div style="padding:3px 0;border-bottom:1px solid rgba(32,255,96,0.06);font-size:10px;color:var(--text);line-height:1.4">' + recText + '</div>';
+                });
+                bHtml += '</div>';
+            }
+            if (!bHtml) bHtml = '<div class="intel-summary" style="white-space:pre-wrap">' + JSON.stringify(data, null, 2) + '</div>';
+        }
+        briefBody.innerHTML = bHtml;
+    }
+
+    // Fetch deductions, narrative, daily summary in parallel
+    Promise.all([
+        api('/api/deductions'),
+        api('/api/deductions/narrative'),
+        api('/api/analysis/daily-summary'),
+    ]).then(function(stratResults) {
+        renderStrategyDeductions(stratResults[0]);
+        renderStrategyNarrative(stratResults[1]);
+        renderDailyBrief(stratResults[2]);
+    });
+
+    // Auto-refresh deductions every 120s
+    registerInterval(async function() {
+        var freshDedResults = await Promise.all([
+            api('/api/deductions'),
+            api('/api/deductions/narrative'),
+        ]);
+        renderStrategyDeductions(freshDedResults[0]);
+        renderStrategyNarrative(freshDedResults[1]);
+    }, 120000);
 
     // --- AUTO-REFRESH: Research & Arxiv feeds every 300s ---
     registerInterval(async function() {
@@ -2569,6 +2993,11 @@ Pages.incidents = async function (el) {
         '<div class="filter-tabs" id="incident-filters">' + filterTabsHtml + '</div>' +
         '<div class="panel"><div class="panel-head"><h3>INCIDENT TIMELINE</h3><span class="ph-meta">' + livePulse('', '') + ' ' + all.length + ' EVENTS</span></div>' +
             '<div class="panel-body" style="max-height:calc(100vh - 460px)" id="incident-timeline-wrap"></div></div>' +
+        '<!-- MANEUVER INDICATORS WATCHLIST -->' +
+        '<div class="panel" style="margin-top:4px" id="incident-maneuver-panel">' +
+            '<div class="panel-head"><h3>MANEUVER INDICATORS WATCHLIST</h3><span class="ph-meta">' + livePulse('120S', 'red') + '</span></div>' +
+            '<div class="panel-body" id="incident-maneuver-body"><div class="loading">LOADING WATCHLIST</div></div>' +
+        '</div>' +
         '</div>';
 
     function renderTimeline(filter) {
@@ -2626,6 +3055,56 @@ Pages.incidents = async function (el) {
             renderTimeline(tab.dataset.filter);
         });
     });
+
+    // Fetch maneuver indicators watchlist
+    function renderManeuverIndicators(data) {
+        var mBody = document.getElementById('incident-maneuver-body');
+        if (!mBody) return;
+        if (!data) {
+            mBody.innerHTML = '<div class="empty-state">MANEUVER DATA UNAVAILABLE</div>';
+            return;
+        }
+        var mHtml = '';
+        if (typeof data === 'string') {
+            mHtml = '<div class="intel-summary" style="white-space:pre-line">' + data + '</div>';
+        } else {
+            var mArr = Array.isArray(data) ? data : (data.indicators || data.watchlist || data.entries || [data]);
+            if (!Array.isArray(mArr)) mArr = [mArr];
+            mArr.forEach(function(m) {
+                if (typeof m === 'string') {
+                    mHtml += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px;color:var(--text)">' + m + '</div>';
+                    return;
+                }
+                var mName = m.satellite || m.name || m.object || 'UNKNOWN';
+                var mSev = (m.severity || m.risk || m.priority || 'medium').toLowerCase();
+                var mCol = mSev === 'critical' || mSev === 'high' ? 'var(--red)' : 'var(--amber)';
+                mHtml += '<div class="threat-card severity-' + mSev + '">' +
+                    '<div class="tc-header">' +
+                        badge(mSev) + ' ' +
+                        (m.country ? countryBadge(m.country === 'Russia' ? 'CIS' : m.country === 'China' ? 'PRC' : m.country) + ' ' : '') +
+                        '<span class="tc-title">' + mName + '</span>' +
+                    '</div>' +
+                    '<div class="tc-body">' + (m.description || m.activity || m.assessment || '') + '</div>' +
+                    '<div class="tc-meta">' +
+                        (m.type ? 'TYPE: <span style="color:' + mCol + '">' + m.type.toUpperCase() + '</span> // ' : '') +
+                        (m.last_maneuver ? 'LAST: ' + m.last_maneuver + ' // ' : '') +
+                        (m.delta_v ? 'DV: ' + m.delta_v + ' // ' : '') +
+                        (m.timestamp ? timeAgo(m.timestamp) : '') +
+                    '</div>' +
+                '</div>';
+            });
+        }
+        mBody.innerHTML = mHtml || '<div class="empty-state">NO MANEUVER INDICATORS</div>';
+    }
+
+    api('/api/analysis/maneuver-indicators').then(function(mData) {
+        renderManeuverIndicators(mData);
+    });
+
+    registerInterval(async function() {
+        var freshMData = await api('/api/analysis/maneuver-indicators');
+        renderManeuverIndicators(freshMData);
+    }, 120000);
 };
 
 
@@ -2826,7 +3305,13 @@ Pages.architecture = async function(el) {
             '<div class="country-tab" data-arch="fvey" style="color:var(--cyan)">FVEY ARCHITECTURE</div>' +
             '<div class="country-tab" data-arch="comparison">COMPARISON</div>' +
         '</div>' +
-        '<div id="arch-detail"></div></div>';
+        '<div id="arch-detail"></div>' +
+        '<!-- CISLUNAR AWARENESS -->' +
+        '<div class="panel" style="margin-top:4px" id="arch-cislunar-panel">' +
+            '<div class="panel-head"><h3>CISLUNAR / BEYOND-GEO AWARENESS</h3><span class="ph-meta">' + liveIndicator('') + '</span></div>' +
+            '<div class="panel-body" id="arch-cislunar-body"><div class="loading">LOADING CISLUNAR DATA</div></div>' +
+        '</div>' +
+        '</div>';
 
     function renderArch(which) {
         var data = which === 'prc' ? prc : which === 'russia' ? russia : which === 'fvey' ? fvey : comparison;
@@ -2896,6 +3381,65 @@ Pages.architecture = async function(el) {
             tab.classList.add('active');
             renderArch(tab.dataset.arch);
         });
+    });
+
+    // Fetch cislunar awareness data
+    api('/api/analysis/cislunar').then(function(cisData) {
+        var cisBody = document.getElementById('arch-cislunar-body');
+        if (!cisBody) return;
+        if (!cisData) {
+            cisBody.innerHTML = '<div class="empty-state">CISLUNAR DATA UNAVAILABLE</div>';
+            return;
+        }
+        var cHtml = '';
+        if (typeof cisData === 'string') {
+            cHtml = '<div class="intel-summary" style="white-space:pre-line;line-height:1.6">' + cisData + '</div>';
+        } else {
+            // Summary / assessment
+            if (cisData.assessment || cisData.summary) {
+                cHtml += '<div class="intel-summary" style="margin-bottom:8px">' + (cisData.assessment || cisData.summary) + '</div>';
+            }
+            // Objects or missions beyond GEO
+            var cisArr = cisData.objects || cisData.missions || cisData.assets || [];
+            if (Array.isArray(cisArr) && cisArr.length) {
+                cHtml += '<div class="section-head" style="margin-bottom:2px">TRACKED BEYOND-GEO OBJECTS</div>';
+                cHtml += '<div class="asat-grid">';
+                cisArr.forEach(function(obj) {
+                    if (typeof obj === 'string') {
+                        cHtml += '<div style="padding:4px;font-size:10px;color:var(--text)">' + obj + '</div>';
+                        return;
+                    }
+                    var oName = obj.name || obj.designation || obj.mission || '?';
+                    var oCountry = obj.country || obj.operator || '';
+                    var oCol = oCountry === 'PRC' || oCountry === 'China' ? 'var(--red)' : oCountry === 'CIS' || oCountry === 'Russia' ? 'var(--cis)' : 'var(--cyan)';
+                    cHtml += '<div class="threat-card severity-medium" style="border-left-color:' + oCol + '">' +
+                        '<div class="tc-header">' +
+                            (oCountry ? '<span class="badge" style="background:rgba(255,255,255,0.05);color:' + oCol + ';border:1px solid ' + oCol + '">' + oCountry.toUpperCase() + '</span> ' : '') +
+                            '<span class="tc-title">' + oName + '</span>' +
+                        '</div>' +
+                        '<div class="tc-body">' + (obj.description || obj.mission_type || obj.purpose || '') + '</div>' +
+                        '<div class="tc-meta">' +
+                            (obj.orbit ? 'ORBIT: ' + obj.orbit + ' // ' : '') +
+                            (obj.altitude ? 'ALT: ' + obj.altitude + ' // ' : '') +
+                            (obj.status ? 'STATUS: ' + obj.status.toUpperCase() : '') +
+                        '</div>' +
+                    '</div>';
+                });
+                cHtml += '</div>';
+            }
+            // Challenges / threats
+            if (cisData.challenges && Array.isArray(cisData.challenges)) {
+                cHtml += '<div style="margin-top:8px"><span class="intel-label" style="color:var(--cis)">CISLUNAR CHALLENGES</span>';
+                cisData.challenges.forEach(function(ch) {
+                    var chText = typeof ch === 'string' ? ch : (ch.description || ch.title || JSON.stringify(ch));
+                    cHtml += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px;color:var(--text)">' + chText + '</div>';
+                });
+                cHtml += '</div>';
+            }
+            if (cisData.intel_note) cHtml += '<div class="intel-summary" style="margin-top:4px">' + cisData.intel_note + '</div>';
+            if (!cHtml) cHtml = '<div style="font-size:9px;color:var(--text);white-space:pre-wrap">' + JSON.stringify(cisData, null, 2).substring(0, 800) + '</div>';
+        }
+        cisBody.innerHTML = cHtml;
     });
 };
 
@@ -3386,6 +3930,30 @@ Pages.environment = async function (el) {
 
     html += '</div></div>'; // end debris section
 
+    // ---- SECTION 8: GLOBAL ENVIRONMENT FEEDS (ionosphere, DSCOVR, radiation, seismic) ----
+    html += '<div class="env-section">' +
+        '<div class="env-section-head">GLOBAL ENVIRONMENT FEEDS ' + liveIndicator('120S') + '</div>' +
+        '<div class="env-section-body">' +
+        '<div class="grid-2" id="env-global-feeds">' +
+            '<div class="panel mb-2" id="env-ionosphere-panel">' +
+                '<div class="panel-head"><h3>IONOSPHERE TEC</h3></div>' +
+                '<div class="panel-body" id="env-ionosphere-body"><div class="loading">LOADING</div></div>' +
+            '</div>' +
+            '<div class="panel mb-2" id="env-dscovr-panel">' +
+                '<div class="panel-head"><h3>DSCOVR L1 DATA</h3></div>' +
+                '<div class="panel-body" id="env-dscovr-body"><div class="loading">LOADING</div></div>' +
+            '</div>' +
+            '<div class="panel mb-2" id="env-radiation-panel">' +
+                '<div class="panel-head"><h3>RADIATION BELT</h3></div>' +
+                '<div class="panel-body" id="env-radiation-body"><div class="loading">LOADING</div></div>' +
+            '</div>' +
+            '<div class="panel mb-2" id="env-seismic-panel">' +
+                '<div class="panel-head"><h3>SEISMIC EVENTS NEAR TEST SITES</h3></div>' +
+                '<div class="panel-body" id="env-seismic-body"><div class="loading">LOADING</div></div>' +
+            '</div>' +
+        '</div>' +
+        '</div></div>';
+
     // ---- TIMESTAMP ----
     html += '<div style="text-align:center;padding:6px;font-size:8px;letter-spacing:2px;color:var(--text-muted)">' +
         '<span class="live-indicator"><span class="live-dot"></span> LIVE</span> ENVIRONMENT DATA COMPOSITE // UPDATED <span id="env-live-ts">' + zuluFull() + '</span> // AUTO-REFRESH 60S' +
@@ -3394,6 +3962,120 @@ Pages.environment = async function (el) {
     html += '</div>'; // end page-wrap
 
     el.innerHTML = html;
+
+    // ---- Fetch global feeds for ionosphere, DSCOVR, radiation, seismic ----
+    Promise.all([
+        api('/api/global/ionosphere'),
+        api('/api/global/dscovr'),
+        api('/api/global/radiation'),
+        api('/api/sigint/seismic'),
+    ]).then(function(globalResults) {
+        var ionoData = globalResults[0];
+        var dscovrData = globalResults[1];
+        var radData = globalResults[2];
+        var seismicData = globalResults[3];
+
+        // Ionosphere TEC
+        var ionoBody = document.getElementById('env-ionosphere-body');
+        if (ionoBody) {
+            if (!ionoData) {
+                ionoBody.innerHTML = '<div class="empty-state">IONOSPHERE DATA UNAVAILABLE</div>';
+            } else {
+                var iHtml = '';
+                if (typeof ionoData === 'string') {
+                    iHtml = '<div style="font-size:10px;color:var(--text);line-height:1.5">' + ionoData + '</div>';
+                } else {
+                    if (ionoData.tec_map_url || ionoData.image_url) {
+                        iHtml += '<img src="' + (ionoData.tec_map_url || ionoData.image_url) + '" alt="TEC Map" loading="lazy" style="width:100%;max-height:200px;object-fit:contain;margin-bottom:4px">';
+                    }
+                    if (ionoData.global_tec != null || ionoData.tec != null) {
+                        iHtml += '<div style="font-size:14px;color:var(--cyan)">' + (ionoData.global_tec || ionoData.tec || '--') + ' <span style="font-size:9px;color:var(--text-muted)">TECU</span></div>';
+                    }
+                    if (ionoData.assessment || ionoData.summary) {
+                        iHtml += '<div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:4px">' + (ionoData.assessment || ionoData.summary) + '</div>';
+                    }
+                    if (ionoData.intel_note) iHtml += '<div class="intel-summary" style="margin-top:4px">' + ionoData.intel_note + '</div>';
+                    if (!iHtml) iHtml = '<div style="font-size:9px;color:var(--text);white-space:pre-wrap">' + JSON.stringify(ionoData, null, 2).substring(0, 500) + '</div>';
+                }
+                ionoBody.innerHTML = iHtml;
+            }
+        }
+
+        // DSCOVR
+        var dscovrBody = document.getElementById('env-dscovr-body');
+        if (dscovrBody) {
+            if (!dscovrData) {
+                dscovrBody.innerHTML = '<div class="empty-state">DSCOVR DATA UNAVAILABLE</div>';
+            } else {
+                var dHtml = '';
+                if (typeof dscovrData === 'string') {
+                    dHtml = '<div style="font-size:10px;color:var(--text);line-height:1.5">' + dscovrData + '</div>';
+                } else {
+                    var dLatest = dscovrData.latest || dscovrData;
+                    if (dLatest.speed != null) dHtml += '<div style="padding:2px 0;font-size:10px">SPEED: <span style="color:var(--cyan)">' + Math.round(dLatest.speed) + ' km/s</span></div>';
+                    if (dLatest.density != null) dHtml += '<div style="padding:2px 0;font-size:10px">DENSITY: <span style="color:var(--amber)">' + dLatest.density.toFixed(1) + ' p/cm3</span></div>';
+                    if (dLatest.bz != null) dHtml += '<div style="padding:2px 0;font-size:10px">Bz: <span style="color:' + (dLatest.bz < 0 ? 'var(--red)' : 'var(--green)') + '">' + dLatest.bz.toFixed(1) + ' nT</span></div>';
+                    if (dLatest.bt != null) dHtml += '<div style="padding:2px 0;font-size:10px">Bt: <span style="color:var(--text)">' + dLatest.bt.toFixed(1) + ' nT</span></div>';
+                    if (dLatest.temperature != null) dHtml += '<div style="padding:2px 0;font-size:10px">TEMP: <span style="color:var(--text)">' + Math.round(dLatest.temperature).toLocaleString() + ' K</span></div>';
+                    if (dscovrData.intel_note) dHtml += '<div class="intel-summary" style="margin-top:4px">' + dscovrData.intel_note + '</div>';
+                    if (!dHtml) dHtml = '<div style="font-size:9px;color:var(--text);white-space:pre-wrap">' + JSON.stringify(dscovrData, null, 2).substring(0, 500) + '</div>';
+                }
+                dscovrBody.innerHTML = dHtml;
+            }
+        }
+
+        // Radiation Belt
+        var radBody = document.getElementById('env-radiation-body');
+        if (radBody) {
+            if (!radData) {
+                radBody.innerHTML = '<div class="empty-state">RADIATION DATA UNAVAILABLE</div>';
+            } else {
+                var rHtml = '';
+                if (typeof radData === 'string') {
+                    rHtml = '<div style="font-size:10px;color:var(--text);line-height:1.5">' + radData + '</div>';
+                } else {
+                    if (radData.belt_status || radData.status) rHtml += '<div style="font-size:12px;color:var(--amber);margin-bottom:4px">STATUS: ' + (radData.belt_status || radData.status).toUpperCase() + '</div>';
+                    if (radData.electron_flux != null) rHtml += '<div style="padding:2px 0;font-size:10px">ELECTRON FLUX: <span style="color:var(--cyan)">' + radData.electron_flux + '</span></div>';
+                    if (radData.proton_flux != null) rHtml += '<div style="padding:2px 0;font-size:10px">PROTON FLUX: <span style="color:var(--red)">' + radData.proton_flux + '</span></div>';
+                    if (radData.assessment || radData.summary) rHtml += '<div style="font-size:10px;color:var(--text);line-height:1.5;margin-top:4px">' + (radData.assessment || radData.summary) + '</div>';
+                    if (radData.intel_note) rHtml += '<div class="intel-summary" style="margin-top:4px">' + radData.intel_note + '</div>';
+                    if (!rHtml) rHtml = '<div style="font-size:9px;color:var(--text);white-space:pre-wrap">' + JSON.stringify(radData, null, 2).substring(0, 500) + '</div>';
+                }
+                radBody.innerHTML = rHtml;
+            }
+        }
+
+        // Seismic Events
+        var seismicBody = document.getElementById('env-seismic-body');
+        if (seismicBody) {
+            if (!seismicData) {
+                seismicBody.innerHTML = '<div class="empty-state">SEISMIC DATA UNAVAILABLE</div>';
+            } else {
+                var sHtml = '';
+                var sArr = Array.isArray(seismicData) ? seismicData : (seismicData.events || seismicData.earthquakes || []);
+                if (!Array.isArray(sArr)) sArr = [];
+                if (sArr.length === 0 && typeof seismicData === 'object' && !Array.isArray(seismicData)) {
+                    if (seismicData.assessment || seismicData.summary) {
+                        sHtml = '<div style="font-size:10px;color:var(--text);line-height:1.5">' + (seismicData.assessment || seismicData.summary) + '</div>';
+                    } else {
+                        sHtml = '<div style="font-size:9px;color:var(--text);white-space:pre-wrap">' + JSON.stringify(seismicData, null, 2).substring(0, 500) + '</div>';
+                    }
+                } else {
+                    sArr.slice(0, 10).forEach(function(ev) {
+                        var mag = ev.magnitude || ev.mag || '?';
+                        var magColor = parseFloat(mag) >= 5 ? 'var(--red)' : parseFloat(mag) >= 3 ? 'var(--cis)' : 'var(--amber)';
+                        sHtml += '<div style="padding:3px 0;border-bottom:1px solid rgba(255,176,0,0.04);font-size:10px">' +
+                            '<span style="color:' + magColor + ';font-size:12px;font-weight:normal">M' + mag + '</span> ' +
+                            '<span style="color:var(--white)">' + (ev.location || ev.place || ev.title || '?') + '</span>' +
+                            '<div style="font-size:8px;color:var(--text-muted)">' + (ev.time || ev.date || '') + (ev.depth ? ' // DEPTH: ' + ev.depth + ' km' : '') + '</div>' +
+                            '</div>';
+                    });
+                }
+                if (seismicData.intel_note) sHtml += '<div class="intel-summary" style="margin-top:4px">' + seismicData.intel_note + '</div>';
+                seismicBody.innerHTML = sHtml || '<div class="empty-state">NO SEISMIC EVENTS DETECTED</div>';
+            }
+        }
+    });
 
     // ---- AUTO-REFRESH: Targeted status strip update every 60s ----
     registerInterval(async function() {

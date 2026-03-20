@@ -27,6 +27,7 @@ from data_sources import (
     final_features,
     global_feeds,
     sigint_feeds,
+    cutting_edge,
 )
 
 _client: httpx.AsyncClient = None
@@ -707,6 +708,39 @@ async def api_sigint_composite():
     return JSONResponse(await sigint_feeds.get_multi_source_intel(_client))
 
 
+# ---- Cutting-Edge Analytical Frameworks ----
+
+@app.get("/api/analysis/engagement-envelopes")
+async def api_engagement_envelopes():
+    """ASAT Engagement Envelope Calculator — maps adversary kill zones vs FVEY assets."""
+    return JSONResponse(cutting_edge.get_engagement_envelopes())
+
+@app.get("/api/analysis/indicators-warnings")
+async def api_indicators_warnings():
+    """Indications & Warnings Framework — multi-domain I&W for space attack."""
+    return JSONResponse(cutting_edge.get_indicators_warnings())
+
+@app.get("/api/analysis/center-of-gravity")
+async def api_center_of_gravity():
+    """Center of Gravity Analysis — CoG methodology per adversary space architecture."""
+    return JSONResponse(cutting_edge.get_center_of_gravity())
+
+@app.get("/api/analysis/escalation-ladder")
+async def api_escalation_ladder():
+    """Space Escalation Ladder — conflict escalation model from peacetime to nuclear HAND."""
+    return JSONResponse(cutting_edge.get_escalation_ladder())
+
+@app.get("/api/analysis/kill-chains")
+async def api_kill_chains():
+    """Kill Chain Analysis — adversary space-dependent targeting chain disruption."""
+    return JSONResponse(cutting_edge.get_kill_chains())
+
+@app.get("/api/analysis/mission-assurance")
+async def api_mission_assurance():
+    """Mission Assurance Scoring — FVEY mission area resilience ratings (7D framework)."""
+    return JSONResponse(cutting_edge.get_mission_assurance())
+
+
 # ---- System ----
 
 @app.get("/api/status")
@@ -717,8 +751,8 @@ async def api_status():
         "version": "12.0.0",
         "classification": "UNCLASSIFIED // OSINT // REL TO FVEY",
         "operator": "Echelon Vantage Pty Ltd — Australia",
-        "api_endpoints": 103,
-        "modules": 30,
+        "api_endpoints": 109,
+        "modules": 31,
         "tabs": 15,
     })
 
@@ -733,7 +767,7 @@ async def api_capabilities():
         "fvey_partners": ["Australia", "United States", "United Kingdom", "Canada", "New Zealand"],
         "itar_status": "ITAR-free — all intelligence derived from open sources",
         "statistics": {
-            "api_endpoints": 103, "backend_modules": 30, "dashboard_tabs": 15,
+            "api_endpoints": 109, "backend_modules": 31, "dashboard_tabs": 15,
             "lines_of_code": 32262, "adversary_sats": "800+", "asat_systems": 33,
             "ground_stations": 63, "wargame_scenarios": 7, "future_programs": 45,
             "incidents": 17, "conferences": 25, "contested_zones": 6, "live_feeds": "20+",
